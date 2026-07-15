@@ -1,0 +1,9 @@
+.env
+env.local
+data/
+renders/
+__pycache__/
+*.pyc
+.DS_Store
+deploy/studio-password.txt
+audit/screenshots/

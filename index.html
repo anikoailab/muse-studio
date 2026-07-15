@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muse Studio</title>
+<!--
+  Muse Studio - single-file front end.
+  Talks to server.py (same folder) via /api/*. With no server or keys it runs in
+  demo mode: sample brand + placeholder slides, every button still clickable.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ============ MUSE THEME - the one block to restyle for a client (Tailor stage) ============ */
+:root{
+  --paper:#faf7f2;        /* warm ivory */
+  --paper-2:#f3eee5;      /* panel fill */
+  --ink:#1b1812;          /* near-black text */
+  --ink-soft:#6d6558;
+  --line:#e2dbcd;
+  --gold:#c19a4b;         /* the single accent */
+  --gold-deep:#a37f35;
+  --violet:#6c5b8f;       /* quiet secondary, used sparingly */
+  --card:#fffdf9;
+  --shadow:0 1px 2px rgba(27,24,18,.06),0 8px 28px rgba(27,24,18,.08);
+  --radius:14px;
+  --font-display:"Fraunces",Georgia,serif;
+  --font-body:"Inter",-apple-system,system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+[data-theme="dark"]{
+  --paper:#14121a;
+  --paper-2:#1c1924;
+  --ink:#efe9dd;
+  --ink-soft:#9a917f;
+  --line:#2c2836;
+  --gold:#d4b06a;
+  --gold-deep:#c19a4b;
+  --violet:#9d8cc2;
+  --card:#1f1b28;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  background-image:radial-gradient(color-mix(in srgb,var(--ink) 6%,transparent) 1px,transparent 1px);background-size:26px 26px}
+button{font-family:var(--font-body);cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:var(--font-body);font-size:13px;color:var(--ink);background:var(--card);
+  border:1px solid var(--line);border-radius:8px;padding:9px 11px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+::placeholder{color:var(--ink-soft);opacity:.7}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
+a{color:var(--gold-deep);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 26px;border-bottom:1px solid var(--line);
+  background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:40}
+.wordmark{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:.01em}
+.wordmark em{font-style:italic;font-weight:300;color:var(--gold-deep)}
+.byline{font-size:11px;color:var(--ink-soft);margin-top:1px}
+.api-pill{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;background:var(--card)}
+.api-dot{width:8px;height:8px;border-radius:50%;background:#3d9a5f;box-shadow:0 0 0 3px rgba(61,154,95,.15)}
+.api-dot.off{background:#c46a3a;box-shadow:0 0 0 3px rgba(196,106,58,.15)}
+.spacer{flex:1}
+.tb-btn{font-size:12px;font-weight:600;color:var(--ink-soft);border:1px solid var(--line);border-radius:8px;
+  padding:7px 13px;background:var(--card);transition:all .15s}
+.tb-btn:hover{color:var(--ink);border-color:var(--gold)}
+
+/* ---------- layout ---------- */
+.layout{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 62px)}
+.panel{border-right:1px solid var(--line);padding:22px;overflow-y:auto;max-height:calc(100vh - 62px);position:sticky;top:62px}
+.main{padding:26px 30px;min-width:0}
+
+/* ---------- left panel ---------- */
+.sect{margin-bottom:22px}
+.sect-label{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--ink-soft);
+  text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:8px}
+.sect-label .rule{flex:1;height:1px;background:var(--line)}
+.scrape-row{display:flex;gap:8px}
+.scrape-row input{flex:1}
+.btn{background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;border-radius:8px;padding:9px 16px;
+  transition:transform .12s,opacity .15s;white-space:nowrap}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+.btn.gold{background:var(--gold);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--gold)}
+.scrape-note{font-size:11.5px;color:var(--ink-soft);margin-top:8px;line-height:1.5}
+.scrape-note.busy{color:var(--gold-deep)}
+.warnbox{background:color-mix(in srgb,#c46a3a 9%,var(--card));border:1px solid color-mix(in srgb,#c46a3a 30%,var(--line));
+  border-radius:8px;padding:8px 11px;font-size:11.5px;color:var(--ink);margin-top:10px;line-height:1.5}
+
+.brand-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.brand-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.brand-name{font-family:var(--font-display);font-size:19px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.brand-url{font-size:11px;color:var(--ink-soft);font-family:var(--font-mono)}
+.src-badge{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:99px;
+  text-transform:uppercase;white-space:nowrap}
+.src-badge.scraped{background:color-mix(in srgb,#3d9a5f 14%,transparent);color:#3d9a5f}
+.src-badge.ai{background:color-mix(in srgb,var(--violet) 16%,transparent);color:var(--violet)}
+.src-badge.manual,.src-badge.default{background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold-deep)}
+.field-row{margin-top:13px}
+.field-label{font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--ink-soft);
+  text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;position:relative;flex:none}
+.swatch input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.swatch .del{position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--ink);color:var(--paper);
+  font-size:9px;line-height:14px;text-align:center;display:none}
+.swatch:hover .del{display:block}
+.swatch.add{display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:16px;background:var(--paper-2)}
+.font-chip{display:inline-flex;align-items:center;gap:7px;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:600}
+.font-chip[contenteditable]:focus{outline:1px solid var(--gold)}
+.voice-box{font-size:12.5px;line-height:1.55;color:var(--ink);background:var(--paper-2);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;min-height:40px}
+.voice-box:focus{outline:1px solid var(--gold)}
+.tag-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.tag{font-size:10.5px;font-weight:600;background:var(--paper-2);border:1px solid var(--line);border-radius:99px;padding:3px 9px;color:var(--ink-soft)}
+.img-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.img-cell{aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);position:relative;cursor:zoom-in;background:var(--paper-2)}
+.img-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.img-cell .del{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:rgba(20,18,26,.75);color:#fff;
+  font-size:10px;line-height:16px;text-align:center;display:none}
+.img-cell:hover .del{display:block}
+.img-cell.add{display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:18px;cursor:pointer}
+.logo-row{display:flex;align-items:center;gap:10px}
+.logo-slot{width:52px;height:52px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;flex:none}
+.logo-slot img{max-width:88%;max-height:88%;object-fit:contain}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft);cursor:pointer;user-select:none}
+.toggle .tk{width:32px;height:18px;border-radius:99px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.toggle .tk::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle.on .tk{background:var(--gold)}
+.toggle.on .tk::after{left:16px}
+
+.direction-box textarea{resize:vertical;min-height:64px}
+.gen-row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.gen-row .count{width:64px;text-align:center}
+.gen-row .btn{flex:1}
+
+/* ---------- main canvas ---------- */
+.empty{max-width:440px;margin:90px auto;text-align:center;color:var(--ink-soft)}
+.empty h2{font-size:26px;color:var(--ink);margin-bottom:10px}
+.empty .muse-mark{font-family:var(--font-display);font-style:italic;font-size:52px;color:var(--gold);opacity:.5;margin-bottom:14px}
+.loadbar{height:3px;background:var(--line);border-radius:99px;overflow:hidden;margin:14px 0;display:none}
+.loadbar.show{display:block}
+.loadbar-fill{height:100%;width:0;background:var(--gold);transition:width .25s ease}
+.demo-banner{background:color-mix(in srgb,var(--violet) 10%,var(--card));border:1px solid color-mix(in srgb,var(--violet) 30%,var(--line));
+  border-radius:10px;padding:10px 14px;font-size:12px;color:var(--ink);margin-bottom:18px;display:none}
+.demo-banner.show{display:block}
+.demo-banner code{font-family:var(--font-mono);font-size:11px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
+
+.row{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.row.scheduled{border-color:color-mix(in srgb,#3d9a5f 45%,var(--line))}
+.row-top{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.row-num{font-family:var(--font-display);font-style:italic;font-size:22px;color:var(--gold);flex:none}
+.row-tone{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--violet)}
+.row-title{font-family:var(--font-display);font-size:17px;font-weight:600}
+.row-idea{font-size:13px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.55;max-width:70ch}
+.row-caption{font-size:12.5px;line-height:1.6;background:var(--paper-2);border:1px solid var(--line);border-radius:8px;
+  padding:10px 12px;white-space:pre-wrap;max-width:70ch}
+.row-caption[contenteditable]:focus{outline:1px solid var(--gold)}
+.cap-label{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--ink-soft);text-transform:uppercase;margin:12px 0 5px}
+.slides-strip{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.slide-card{width:132px;flex:none;position:relative}
+.slide-thumb{aspect-ratio:4/5;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--paper-2);cursor:zoom-in;position:relative}
+.slide-thumb img,.slide-thumb svg{width:100%;height:100%;object-fit:cover;display:block}
+.slide-thumb .failed{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  font-size:10px;color:#c4453a;padding:8px;background:color-mix(in srgb,#c4453a 6%,var(--paper-2))}
+.role-chip{position:absolute;top:6px;left:6px;font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+  background:rgba(20,18,26,.72);color:#fff;padding:2px 7px;border-radius:5px;z-index:2}
+.slide-n{position:absolute;bottom:6px;right:6px;font-family:var(--font-mono);font-size:9px;font-weight:700;
+  background:var(--gold);color:#fff;padding:1px 6px;border-radius:5px;z-index:2}
+.row-actions{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
+.slide-count{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft)}
+.slide-count input{width:52px;text-align:center;padding:6px}
+.cost-hint{font-size:11px;color:var(--ink-soft);margin-left:auto}
+.render-note{font-size:11.5px;color:var(--gold-deep);margin-top:8px;display:none}
+.render-note.show{display:block}
+
+/* ---------- overlay preview ---------- */
+.overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 55%,transparent);backdrop-filter:blur(6px);
+  z-index:80;display:none;align-items:center;justify-content:center;padding:28px}
+.overlay.show{display:flex}
+.ov-panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;max-width:1080px;width:100%;max-height:92vh;
+  padding:26px 28px;box-shadow:0 30px 80px rgba(0,0,0,.35);position:relative;display:flex;flex-direction:column}
+/* Only ov-scroll scrolls (slides + caption) - the schedule drawer sits OUTSIDE any overflow:auto
+   ancestor, because Safari clips a native <input type=date>/<input type=time> popover to the
+   nearest overflow:auto ancestor, which made the calendar/time picker unreachable when it lived
+   inside this panel's scroll area. */
+.ov-scroll{overflow-y:auto;min-height:0}
+.ov-close{position:absolute;top:14px;right:16px;font-size:22px;color:var(--ink-soft);width:34px;height:34px;border-radius:8px}
+.ov-close:hover{background:var(--paper-2);color:var(--ink)}
+.ov-title{font-family:var(--font-display);font-size:20px;font-weight:600;margin-bottom:14px;padding-right:44px}
+.ov-stage{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory}
+.ov-slide{width:300px;flex:none;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--line);
+  position:relative;scroll-snap-align:start;cursor:zoom-in;background:var(--paper-2)}
+.ov-slide img,.ov-slide svg{width:100%;height:100%;object-fit:cover;display:block}
+.ov-caption{font-size:13px;line-height:1.65;background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin-top:16px;white-space:pre-wrap}
+.ov-caption[contenteditable]:focus{outline:1px solid var(--gold)}
+.platform-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.platform-row label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;min-width:92px;flex-shrink:0;white-space:nowrap;cursor:pointer}
+.platform-row select{flex:1}
+.acct-manage-row{display:flex;gap:8px;align-items:center}
+.acct-manage-row select{flex:1}
+.btn.small{padding:8px 10px;font-size:11px}
+.brand-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.brand-row .brand-name{flex:1 1 180px;font-family:var(--font-body);font-size:13px;font-weight:400}
+.brand-row .brand-plat{flex:1 1 150px}
+.brand-row-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.brand-row-head span{flex:1 1 180px;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.brand-row-head span.brand-plat{flex:1 1 150px}
+.del-brand{font-size:22px;color:var(--ink-soft);width:34px;height:34px;border-radius:8px}
+.del-brand:hover{background:var(--paper-2);color:var(--ink)}
+.platform-check-row{display:flex;flex-wrap:wrap;gap:10px 14px;margin-bottom:10px}
+.platform-check-row label{display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap}
+/* the global input{padding;border;background} rule makes Safari drop the checkbox's native
+   appearance and render it as an oversized empty box overlapping its label - reset it back */
+.platform-check-row input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;padding:0;border:none;
+  background:none;width:15px;height:15px;margin:0;flex-shrink:0;accent-color:var(--gold)}
+.platform-check-row label.disabled{opacity:.45;cursor:not-allowed}
+.platform-check-row input:disabled{cursor:not-allowed}
+.sched-drawer{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.sched-drawer h3{font-size:15px;margin-bottom:12px}
+.sched-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.sched-grid label{display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+  color:var(--ink-soft);text-transform:uppercase;margin-bottom:5px}
+.sched-ok{font-size:12.5px;color:#3d9a5f;font-weight:600;margin-top:10px;display:none}
+.sched-ok.show{display:block}
+
+/* ---------- lightbox + toast ---------- */
+.lightbox{position:fixed;inset:0;background:rgba(10,9,14,.88);z-index:120;display:none;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.show{display:flex}
+.lightbox img,.lightbox svg{max-width:88vw;max-height:88vh;border-radius:10px}
+.toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,20px);background:var(--ink);color:var(--paper);
+  font-size:13px;padding:11px 20px;border-radius:10px;opacity:0;transition:all .25s;z-index:200;pointer-events:none;max-width:80vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast code{font-family:var(--font-mono);font-size:12px;color:var(--gold)}
+
+.skel .sk-line{display:inline-block;width:200px;height:13px;border-radius:6px;background:var(--paper-2);animation:pulse 1.2s ease infinite}
+.skel .sk-block{height:150px;border-radius:10px;background:var(--paper-2);animation:pulse 1.2s ease infinite;flex:1}
+.skel .sk-body{display:flex;gap:10px;margin-top:12px}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.panel{position:static;max-height:none;border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="wordmark">Muse <em>Studio</em></div>
+    <div class="byline">brand in, scheduled posts out</div>
+  </div>
+  <div class="api-pill"><span class="api-dot off" id="apiDot"></span><span id="apiLabel">checking</span></div>
+  <div class="spacer"></div>
+  <a class="tb-btn" href="https://my.blotato.com/queue/schedules" target="_blank" rel="noopener">View scheduled</a>
+  <button class="tb-btn" id="resetBtn">Reset</button>
+  <button class="tb-btn" id="themeBtn">Dark</button>
+</div>
+
+<div class="layout">
+
+  <!-- ============ LEFT: brand panel ============ -->
+  <aside class="panel">
+    <div class="sect">
+      <div class="sect-label">Brand website<span class="rule"></span></div>
+      <div class="scrape-row">
+        <input id="urlInput" placeholder="drinkpoppi.com" spellcheck="false">
+        <button class="btn" id="scrapeBtn">Read it</button>
+      </div>
+      <div class="scrape-note" id="scrapeNote">Paste a site and Muse reads its colors, voice and photos.</div>
+      <div id="warnBox"></div>
+    </div>
+
+    <div class="sect" id="brandSect" style="display:none">
+      <div class="sect-label">Brand system<span class="rule"></span></div>
+      <div class="brand-card">
+        <div class="brand-head">
+          <div style="flex:1;min-width:0">
+            <div class="brand-name" id="bName" contenteditable spellcheck="false"></div>
+            <div class="brand-url" id="bUrl"></div>
+          </div>
+          <span id="bBadge"></span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Palette <span id="colSrc"></span></div>
+          <div class="swatches" id="swatches"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Typeface</div>
+          <span class="font-chip" id="bFont" contenteditable spellcheck="false"></span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Voice <span id="voiceSrc"></span></div>
+          <div class="voice-box" id="bVoice" contenteditable spellcheck="false"></div>
+          <div class="tag-row" id="bTags"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Logo</div>
+          <div class="logo-row">
+            <div class="logo-slot" id="logoSlot"><span style="font-size:10px;color:var(--ink-soft)">none</span></div>
+            <span class="img-cell add" id="logoAdd" title="Upload logo">+</span>
+            <div class="toggle" id="logoToggle"><span class="tk"></span><span>Use real logo in renders</span></div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Imagery</div>
+          <div class="img-grid" id="imgGrid"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">Products</div>
+          <div class="img-grid" id="prodGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sect" id="acctSectWrap" style="display:none">
+      <div class="sect-label">Connected accounts<span class="rule"></span></div>
+      <div id="accountSect" style="display:none;margin-bottom:14px">
+        <div class="acct-manage-row">
+          <select id="acctProfile"><option value="">Choose your account</option></select>
+          <button class="btn ghost small" id="manageBrandsBtn" type="button">Manage brands</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sect direction-box" id="directionSect" style="display:none">
+      <div class="sect-label">Creative direction<span class="rule"></span></div>
+      <textarea id="direction" placeholder="e.g. a summer campaign around picnics and golden hour"></textarea>
+      <div class="gen-row">
+        <input class="count" id="ideaCount" type="number" min="1" max="8" value="3">
+        <button class="btn gold" id="ideasBtn">Generate ideas</button>
+      </div>
+      <div class="loadbar" id="loadbar"><div class="loadbar-fill" id="loadbarFill"></div></div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN canvas ============ -->
+  <main class="main">
+    <div class="demo-banner" id="demoBanner">
+      Demo content. Run <code>python server.py</code> and add keys in <code>env.local</code> to go live.
+    </div>
+    <div class="empty" id="empty">
+      <div class="muse-mark">M</div>
+      <h2>Every brand has a muse.</h2>
+      <p>Read a brand on the left, give a direction, and the ideas arrive here as ready-to-schedule carousels.</p>
+    </div>
+    <div id="rows"></div>
+  </main>
+</div>
+
+<!-- ============ preview overlay ============ -->
+<div class="overlay" id="ovModal">
+  <div class="ov-panel">
+    <button class="ov-close" id="ovClose">&times;</button>
+    <div class="ov-scroll">
+      <div class="ov-title" id="ovTitle"></div>
+      <div class="ov-stage" id="ovStage"></div>
+      <div class="cap-label">Caption (tap to edit)</div>
+      <div class="ov-caption" id="ovCap" contenteditable spellcheck="false"></div>
+    </div>
+    <div class="sched-drawer">
+      <h3>Schedule</h3>
+      <div id="modalPlatforms" class="platform-check-row"></div>
+      <div class="sched-grid">
+        <div><label>Date</label><input type="text" id="schedDate" placeholder="YYYY-MM-DD" inputmode="numeric" autocomplete="off"></div>
+        <div><label>Time</label><input type="text" id="schedTime" placeholder="HH:MM" inputmode="numeric" autocomplete="off"></div>
+        <button class="btn gold" id="ovSched">Schedule</button>
+      </div>
+      <div class="sched-ok" id="schedOk"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ brand account editor ============ -->
+<div class="overlay" id="brandsModal">
+  <div class="ov-panel">
+    <button class="ov-close" id="brandsClose">&times;</button>
+    <div class="ov-scroll">
+      <div class="ov-title">Manage brands</div>
+      <div id="brandsList"></div>
+      <button class="btn ghost" id="addBrandBtn" type="button">+ Add brand</button>
+    </div>
+    <div class="sched-drawer">
+      <button class="btn gold" id="saveBrandsBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox"><div id="lbInner"></div></div>
+<div class="toast" id="toast"></div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+
+<script>
+"use strict";
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const imgUrl=it=>typeof it==="string"?it:(it&&(it.url||it.src))||"";
+let _toastT;
+function toast(html,ms=2800){const t=$("#toast");t.innerHTML=html;t.classList.add("show");clearTimeout(_toastT);_toastT=setTimeout(()=>t.classList.remove("show"),ms);}
+function openLightbox(inner){$("#lbInner").innerHTML=inner;$("#lightbox").classList.add("show");}
+$("#lightbox").onclick=()=>$("#lightbox").classList.remove("show");
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("#lightbox").classList.remove("show");$("#ovModal").classList.remove("show");}});
+
+/* ================= state ================= */
+const SERVED=location.protocol.startsWith("http");
+let API={ok:false,falKey:false,openrouterKey:false,blotatoKey:false};
+let brand=null;
+function defaultPlatforms(){return {instagram:{on:true,accountId:""},tiktok:{on:false,accountId:""},
+  facebook:{on:false,accountId:"",pageId:""},pinterest:{on:false,accountId:"",boardId:""},
+  twitter:{on:false,accountId:""}};}
+let state={direction:"",posts:[],accountId:"",platforms:defaultPlatforms()};
+let useLogo=true;
+
+const DEMO_BRAND={
+  name:"Aurelia Soda",url:"aurelia.example",scrapedReal:false,lang:"en",
+  fonts:{display:"Fraunces",body:"Inter",note:"demo"},
+  colors:["#e2725b","#f4c95d","#2a6f6b","#faf3e7","#1b1812"],
+  voice:"Sun-drunk sparkling botanicals for slow afternoons. Warm, a little nostalgic, never shouty.",
+  voiceTags:["warm","playful","nostalgic"],taglines:["Golden hour in a bottle"],
+  imagery:[],productImages:[],logo:"",warnings:[],sources:{colors:"scraped",voice:"scraped"}
+};
+
+/* ================= theme ================= */
+const savedTheme=localStorage.getItem("muse-theme");
+if(savedTheme)document.documentElement.dataset.theme=savedTheme;
+function syncThemeBtn(){$("#themeBtn").textContent=document.documentElement.dataset.theme==="dark"?"Light":"Dark";}
+$("#themeBtn").onclick=()=>{
+  const next=document.documentElement.dataset.theme==="dark"?"":"dark";
+  if(next)document.documentElement.dataset.theme=next;else delete document.documentElement.dataset.theme;
+  localStorage.setItem("muse-theme",next);syncThemeBtn();
+};
+syncThemeBtn();
+
+/* ================= persistence ================= */
+function persistState(){
+  // url (the real, Blotato-reachable Fal CDN link) and savedPath (a local-disk backup, only
+  // resolvable from this browser) must survive the round trip as SEPARATE fields - collapsing
+  // them into one (the old code kept only savedPath once it existed) silently discarded the one
+  // URL scheduling actually needs, so a page reload after a successful render made Schedule
+  // fail with "nothing to schedule" even though the slides displayed fine.
+  try{localStorage.setItem("muse-state",JSON.stringify({direction:state.direction,accountId:state.accountId,
+    platforms:state.platforms,
+    posts:state.posts.map(p=>({...p,slides:(p.slides||[]).map(s=>({role:s.role,url:s.url,savedPath:s.savedPath,failed:s.failed}))}))}));}catch(e){}
+}
+async function persistBrand(){
+  if(SERVED&&brand)try{await fetch("/api/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({brand})});}catch(e){}
+}
+function restoreState(){
+  try{const s=JSON.parse(localStorage.getItem("muse-state")||"null");
+    if(s){state.direction=s.direction||"";state.accountId=s.accountId||"";state.posts=s.posts||[];
+      // merge over the defaults so older saved sessions (before multi-platform existed) still
+      // get valid tiktok/facebook entries instead of throwing on a missing key
+      state.platforms=Object.assign(defaultPlatforms(),s.platforms||{});
+      // REPAIR pass for posts saved by the old buggy persistState, which overwrote the real
+      // https url with the local renders/... path: move that path to savedPath where it belongs.
+      // Without this, a post rendered before the fix stays unschedulable forever even though
+      // its slides display fine - the exact "Render the carousel first" dead end.
+      for(const p of state.posts)for(const sl of (p.slides||[])){
+        if(sl&&sl.url&&!/^https?:/i.test(sl.url)){sl.savedPath=sl.savedPath||sl.url;sl.url="";}
+      }}}catch(e){}
+}
+
+/* ================= API status ================= */
+async function checkApi(){
+  if(!SERVED){setApi(false,"demo mode, run server.py");$("#demoBanner").classList.add("show");return;}
+  try{
+    const j=await (await fetch("/api/health")).json();
+    API=j;
+    const live=j.falKey&&j.openrouterKey;
+    setApi(live,live?"connected":"add keys in env.local");
+    if(!live)$("#demoBanner").classList.add("show");
+  }catch(e){setApi(false,"server off, demo");$("#demoBanner").classList.add("show");}
+}
+function setApi(on,label){$("#apiDot").classList.toggle("off",!on);$("#apiLabel").textContent=label;}
+
+/* ================= Blotato accounts (multi-platform) ================= */
+const _norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+let accountProfiles=new Map();
+let rawAccounts=[],fbPagesList=[],pinBoardsList=[];
+let customBrands=[],customBrandsSaved=false;
+const _brandId=()=>"b"+Date.now()+Math.random().toString(36).slice(2);
+function _blankBrand(){return {id:_brandId(),name:"",instagram:{accountId:""},tiktok:{accountId:""},
+  facebook:{accountId:"",pageId:""},pinterest:{accountId:"",boardId:""},twitter:{accountId:""}};}
+function restoreCustomBrands(){
+  try{
+    const saved=localStorage.getItem("muse-brands");
+    customBrandsSaved=saved!==null;
+    const parsed=JSON.parse(saved||"[]");
+    customBrands=Array.isArray(parsed)?parsed:[];
+  }catch(e){customBrands=[];customBrandsSaved=false;}
+}
+function persistCustomBrands(){
+  try{localStorage.setItem("muse-brands",JSON.stringify(customBrands));customBrandsSaved=true;}catch(e){}
+}
+function _profileLabel(name){
+  const value=String(name||"").trim();
+  if(value&&value===value.toLowerCase()&&/^[a-z0-9._ -]+$/.test(value))
+    return value.replace(/[._-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+  return value;
+}
+function buildProfiles(accounts,fbPages,pinBoards){
+  const profiles=new Map();
+  const add=(key,label,platform,data,preferLabel=false)=>{
+    if(!key)return;
+    let profile=profiles.get(key);
+    if(!profile){profile={label:_profileLabel(label)||key};profiles.set(key,profile);}
+    if(preferLabel&&label)profile.label=String(label);
+    profile[platform]=data;
+  };
+  for(const account of accounts){
+    const platform=String(account.platform||account.type||"").toLowerCase();
+    if(!["instagram","tiktok","pinterest","twitter"].includes(platform))continue;
+    const id=account.id||account.accountId||"";
+    const name=account.username||account.fullname||account.name||account.handle||id;
+    const data={accountId:id};
+    if(platform==="pinterest"){
+      const board=pinBoards.find(b=>b.accountId===id&&_norm(b.name)===_norm(name));
+      data.boardId=board?board.id:"";
+    }
+    add(_norm(name),account.fullname||account.username||account.name||account.handle||id,platform,data);
+  }
+  for(const page of fbPages)add(_norm(page.name),page.name,"facebook",{accountId:page.accountId,pageId:page.id},true);
+  return profiles;
+}
+async function _loadSubaccounts(accounts){
+  const groups=await Promise.all(accounts.map(async account=>{
+    const accountId=account.id||account.accountId||"";
+    if(!accountId)return[];
+    try{
+      const j=await (await fetch("/api/subaccounts?accountId="+encodeURIComponent(accountId))).json();
+      return (Array.isArray(j.subaccounts)?j.subaccounts:[]).map(item=>({...item,accountId}));
+    }catch(e){return[];}
+  }));
+  return groups.flat();
+}
+function _profileMatchesState(profile){
+  const platforms=["instagram","tiktok","facebook","pinterest","twitter"];
+  return platforms.every(plat=>(state.platforms[plat].accountId||"")===(profile[plat]?.accountId||""))&&
+    (state.platforms.facebook.pageId||"")===(profile.facebook?.pageId||"")&&
+    (state.platforms.pinterest.boardId||"")===(profile.pinterest?.boardId||"");
+}
+function seedBrandsFromProfiles(){
+  if(customBrands.length||customBrandsSaved)return;
+  customBrands=[...accountProfiles.values()].map(profile=>{
+    const row=_blankBrand();row.name=profile.label||"";
+    for(const plat of ["instagram","tiktok","facebook","pinterest","twitter"])
+      row[plat]={...row[plat],...(profile[plat]||{})};
+    return row;
+  });
+}
+function populateAcctProfile(){
+  const sel=$("#acctProfile");
+  if(customBrands.length){
+    const sorted=[...customBrands].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    sel.innerHTML=`<option value="">Choose your account</option>`+sorted.map(b=>
+      `<option value="${esc(b.id)}">${esc(b.name||"(unnamed)")}</option>`).join("");
+    const saved=sorted.find(brand=>_profileMatchesState(brand));
+    sel.value=saved?saved.id:"";
+    return;
+  }
+  const sorted=[...accountProfiles.entries()].sort((a,b)=>a[1].label.localeCompare(b[1].label));
+  sel.innerHTML=`<option value="">Choose your account</option>`+sorted.map(([key,p])=>
+    `<option value="${esc(key)}">${esc(p.label)}</option>`).join("");
+  const saved=sorted.find(([,profile])=>_profileMatchesState(profile));
+  sel.value=saved?saved[0]:"";
+}
+function _accountLabel(account){return account.username||account.fullname||account.name||account.handle||account.id||account.accountId||"Account";}
+function renderBrandsList(){
+  const wrap=$("#brandsList");
+  const accountOptions=plat=>rawAccounts.filter(a=>String(a.platform||a.type||"").toLowerCase()===plat).map(a=>{
+    const id=a.id||a.accountId||"";return {value:id,label:_accountLabel(a)};
+  });
+  const subOptions=(items,idKey)=>items.map(item=>({
+    value:(item.accountId||"")+"|"+(item[idKey]||item.id||""),label:item.name||item.title||item.username||item.id||"Item"
+  }));
+  const options={instagram:accountOptions("instagram"),tiktok:accountOptions("tiktok"),
+    facebook:subOptions(fbPagesList,"pageId"),pinterest:subOptions(pinBoardsList,"boardId"),twitter:accountOptions("twitter")};
+  const labels={instagram:"Instagram",tiktok:"TikTok",facebook:"Facebook",pinterest:"Pinterest",twitter:"Twitter"};
+  const header=`<div class="brand-row-head"><span class="brand-name">Name</span>`+
+    ["instagram","tiktok","facebook","pinterest","twitter"].map(plat=>`<span class="brand-plat">${labels[plat]}</span>`).join("")+
+    `<span style="width:22px"></span></div>`;
+  wrap.innerHTML=header+customBrands.map(brand=>{
+    const selects=["instagram","tiktok","facebook","pinterest","twitter"].map(plat=>{
+      const entry=brand[plat]||{};
+      const selected=(plat==="facebook")?(entry.accountId||"")+"|"+(entry.pageId||""):
+        (plat==="pinterest")?(entry.accountId||"")+"|"+(entry.boardId||""):(entry.accountId||"");
+      return `<select class="brand-plat" data-plat="${plat}"><option value="">${labels[plat]}: none</option>`+
+        options[plat].map(opt=>`<option value="${esc(opt.value)}"${opt.value===selected?" selected":""}>${esc(opt.label)}</option>`).join("")+`</select>`;
+    }).join("");
+    return `<div class="brand-row" data-id="${esc(brand.id)}"><input type="text" class="brand-name" value="${esc(brand.name)}" placeholder="Brand name">${selects}<button class="del-brand" data-id="${esc(brand.id)}" type="button">&times;</button></div>`;
+  }).join("");
+  wrap.querySelectorAll(".brand-row").forEach(row=>{
+    const findBrand=()=>customBrands.find(b=>b.id===row.dataset.id);
+    row.querySelector(".brand-name").onblur=e=>{const brand=findBrand();if(brand)brand.name=e.target.value;};
+    row.querySelectorAll(".brand-plat").forEach(select=>select.onchange=e=>{
+      const brand=findBrand();if(!brand)return;
+      const plat=e.target.dataset.plat,value=e.target.value;
+      if(plat==="facebook"){const [accountId="",pageId=""]=value.split("|");brand.facebook={accountId,pageId};}
+      else if(plat==="pinterest"){const [accountId="",boardId=""]=value.split("|");brand.pinterest={accountId,boardId};}
+      else brand[plat]={accountId:value};
+    });
+    row.querySelector(".del-brand").onclick=()=>{customBrands=customBrands.filter(b=>b.id!==row.dataset.id);renderBrandsList();};
+  });
+}
+async function loadAccounts(){
+  if(!SERVED||!API.blotatoKey){$("#accountSect").style.display="none";return;}
+  $("#accountSect").style.display="";
+  const sel=$("#acctProfile");
+  sel.innerHTML=`<option value="">Loading accounts...</option>`;
+  try{
+    const j=await (await fetch("/api/accounts")).json();
+    rawAccounts=Array.isArray(j.accounts)?j.accounts:[];
+    const forPlatform=plat=>rawAccounts.filter(a=>String(a.platform||a.type||"").toLowerCase()===plat);
+    // Fetch Facebook Pages and Pinterest boards before building the grouped profile list.
+    [fbPagesList,pinBoardsList]=await Promise.all([
+      _loadSubaccounts(forPlatform("facebook")),
+      _loadSubaccounts(forPlatform("pinterest"))
+    ]);
+    accountProfiles=buildProfiles(rawAccounts,fbPagesList,pinBoardsList);
+    seedBrandsFromProfiles();
+    populateAcctProfile();
+  }catch(e){
+    rawAccounts=[];fbPagesList=[];pinBoardsList=[];accountProfiles=new Map();
+    sel.innerHTML=`<option value="">Accounts unavailable</option>`;
+  }
+}
+$("#acctProfile").onchange=e=>{
+  const profile=customBrands.length?customBrands.find(b=>b.id===e.target.value):accountProfiles.get(e.target.value);
+  for(const plat of ["instagram","tiktok","facebook","pinterest","twitter"]){
+    const entry=profile&&profile[plat];
+    const enabled=!!entry?.accountId;
+    if(plat==="facebook")state.platforms[plat]={on:enabled,accountId:entry?.accountId||"",pageId:entry?.pageId||""};
+    else if(plat==="pinterest")state.platforms[plat]={on:enabled,accountId:entry?.accountId||"",boardId:entry?.boardId||""};
+    else state.platforms[plat]={on:enabled,accountId:entry?.accountId||""};
+  }
+  persistState();
+  if($("#ovModal").classList.contains("show"))renderModalPlatforms();
+};
+$("#manageBrandsBtn").onclick=()=>{renderBrandsList();$("#brandsModal").classList.add("show");};
+$("#brandsClose").onclick=()=>$("#brandsModal").classList.remove("show");
+$("#addBrandBtn").onclick=()=>{customBrands.push(_blankBrand());renderBrandsList();};
+$("#saveBrandsBtn").onclick=()=>{
+  const focused=document.activeElement;if(focused&&focused.classList.contains("brand-name"))focused.blur();
+  persistCustomBrands();$("#brandsModal").classList.remove("show");populateAcctProfile();
+};
+
+/* ================= brand rendering ================= */
+function srcBadge(kind){
+  if(!kind)return"";
+  const label={scraped:"scraped",ai:"ai sampled",manual:"manual",default:"default"}[kind]||kind;
+  return `<span class="src-badge ${kind}">${label}</span>`;
+}
+function drawBrand(){
+  if(!brand){$("#brandSect").style.display="none";$("#acctSectWrap").style.display="none";$("#directionSect").style.display="none";return;}
+  $("#brandSect").style.display="";
+  $("#acctSectWrap").style.display="";
+  $("#directionSect").style.display="";
+  $("#bName").textContent=brand.name||"";
+  $("#bUrl").textContent=brand.url||"";
+  $("#bBadge").innerHTML=brand.scrapedReal?srcBadge("scraped"):srcBadge("manual");
+  $("#colSrc").innerHTML=srcBadge((brand.sources||{}).colors);
+  $("#voiceSrc").innerHTML=srcBadge((brand.sources||{}).voice);
+  $("#bFont").textContent=(brand.fonts&&brand.fonts.display)||"Inter";
+  $("#bVoice").textContent=brand.voice||"";
+  $("#bTags").innerHTML=(brand.voiceTags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+  drawSwatches();drawImages();drawLogo();
+  const w=brand.warnings||[];
+  $("#warnBox").innerHTML=w.length?`<div class="warnbox">${w.map(esc).join("<br>")}</div>`:"";
+}
+function drawSwatches(){
+  const cols=brand.colors||[];
+  $("#swatches").innerHTML=cols.map((c,i)=>
+    `<span class="swatch" style="background:${esc(c)}" title="${esc(c)}">
+      <input type="color" value="${esc(c)}" data-i="${i}"><span class="del" data-i="${i}">&times;</span></span>`).join("")+
+    `<span class="swatch add" id="swAdd">+</span>`;
+  $("#swatches").querySelectorAll("input[type=color]").forEach(inp=>{
+    inp.onchange=e=>{brand.colors[+e.target.dataset.i]=e.target.value;markManual("colors");drawBrand();persistBrand();};
+  });
+  $("#swatches").querySelectorAll(".del").forEach(d=>{
+    d.onclick=e=>{e.stopPropagation();brand.colors.splice(+d.dataset.i,1);markManual("colors");drawBrand();persistBrand();};
+  });
+  $("#swAdd").onclick=()=>{brand.colors.push("#c19a4b");markManual("colors");drawBrand();persistBrand();};
+}
+function markManual(field){brand.sources=brand.sources||{};brand.sources[field]="manual";}
+function drawImages(){
+  const grid=(id,arr,key)=>{
+    $(id).innerHTML=arr.map((it,i)=>{
+      const u=imgUrl(it);
+      return `<span class="img-cell" data-i="${i}"><img src="${esc(u)}" loading="lazy" onerror="this.closest('.img-cell').remove()">
+        <span class="del" data-i="${i}">&times;</span></span>`;}).join("")+
+      `<span class="img-cell add" data-key="${key}">+</span>`;
+    $(id).querySelectorAll(".img-cell:not(.add)").forEach(cell=>{
+      cell.onclick=e=>{
+        if(e.target.classList.contains("del")){e.stopPropagation();arr.splice(+e.target.dataset.i,1);drawBrand();persistBrand();return;}
+        const u=imgUrl(arr[+cell.dataset.i]);if(u)openLightbox(`<img src="${esc(u)}">`);
+      };
+    });
+    $(id).querySelector(".add").onclick=()=>uploadInto(arr);
+  };
+  grid("#imgGrid",brand.imagery=brand.imagery||[],"imagery");
+  grid("#prodGrid",brand.productImages=brand.productImages||[],"products");
+}
+function uploadInto(arr){
+  const f=$("#fileInput");
+  f.onchange=()=>{
+    const file=f.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=()=>{arr.push({name:brand.name||"upload",url:r.result});drawBrand();persistBrand();toast("Photo added");};
+    r.readAsDataURL(file);f.value="";
+  };
+  f.click();
+}
+function drawLogo(){
+  const slot=$("#logoSlot");
+  if(brand.logo)slot.innerHTML=`<img src="${esc(brand.logo)}" onerror="this.parentNode.innerHTML='<span style=&quot;font-size:10px;color:var(--ink-soft)&quot;>none</span>'">`;
+  else slot.innerHTML=`<span style="font-size:10px;color:var(--ink-soft)">none</span>`;
+  $("#logoToggle").classList.toggle("on",useLogo&&!!brand.logo);
+}
+$("#logoToggle").onclick=()=>{useLogo=!useLogo;drawLogo();};
+$("#logoAdd").onclick=()=>{
+  const f=$("#fileInput");
+  f.onchange=()=>{
+    const file=f.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=()=>{brand.logo=r.result;useLogo=true;markManual("logo");drawLogo();persistBrand();toast("Logo added");};
+    r.readAsDataURL(file);f.value="";
+  };
+  f.click();
+};
+$("#bName").onblur=()=>{brand.name=$("#bName").textContent.trim();persistBrand();};
+$("#bVoice").onblur=()=>{brand.voice=$("#bVoice").textContent.trim();markManual("voice");persistBrand();};
+$("#bFont").onblur=()=>{brand.fonts=brand.fonts||{};brand.fonts.display=$("#bFont").textContent.trim();persistBrand();};
+
+/* ================= scrape ================= */
+$("#scrapeBtn").onclick=doScrape;
+$("#urlInput").addEventListener("keydown",e=>{if(e.key==="Enter")doScrape();});
+async function doScrape(){
+  const url=$("#urlInput").value.trim();
+  if(!url){toast("Paste a website first");return;}
+  const note=$("#scrapeNote"),btn=$("#scrapeBtn");
+  btn.disabled=true;
+  if(!SERVED){
+    note.textContent="Demo mode: loading the sample brand.";
+    await new Promise(r=>setTimeout(r,700));
+    brand=JSON.parse(JSON.stringify(DEMO_BRAND));brand.url=url.replace(/^https?:\/\//,"");
+    drawBrand();btn.disabled=false;note.textContent="Sample brand loaded. Run server.py for real scraping.";
+    return;
+  }
+  note.className="scrape-note busy";
+  note.textContent="Reading the site...";
+  const tick=setTimeout(()=>{note.textContent="Sampling colors and voice...";},4000);
+  try{
+    const r=await fetch("/api/scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+    const j=await r.json();
+    if(!r.ok||!j.brand)throw new Error(j.error||("HTTP "+r.status));
+    brand=j.brand;
+    drawBrand();
+    note.className="scrape-note";
+    note.textContent="Brand loaded. Edit anything that looks off, then set a direction.";
+  }catch(e){
+    note.className="scrape-note";
+    note.textContent="Could not read that site: "+(e.message||e);
+    toast("Scrape failed, see the note on the left",3600);
+  }finally{clearTimeout(tick);btn.disabled=false;}
+}
+
+/* ================= ideas ================= */
+let _lbT;
+function startLoadbar(){const b=$("#loadbar"),f=$("#loadbarFill");b.classList.add("show");f.style.width="4%";let w=4;
+  clearInterval(_lbT);_lbT=setInterval(()=>{w+=Math.max(.35,(88-w)*.022);if(w>=88){w=88;clearInterval(_lbT);}f.style.width=w.toFixed(1)+"%";},200);}
+function stopLoadbar(){const b=$("#loadbar"),f=$("#loadbarFill");clearInterval(_lbT);f.style.width="100%";
+  setTimeout(()=>{b.classList.remove("show");f.style.width="0";},420);}
+
+const noEm=t=>String(t||"").replace(/\s*[—–]\s*/g," - ");
+const noSlideCount=t=>String(t||"")
+  .replace(/\b(a|an|one|two|three|four|five|six|\d+)[\s-]+(slide|image|frame|panel|photo|part)s?\b/gi,"")
+  .replace(/\b(single|multi)[\s-]?(slide|image|frame|panel|photo)s?\b/gi,"")
+  .replace(/\bcarousel\s+of\s+[a-z0-9]+\b/gi,"carousel")
+  .replace(/\s{2,}/g," ").replace(/\s+([.,;:!?])/g,"$1").trim();
+const cleanTxt=t=>noSlideCount(noEm(t));
+
+function fromAiIdeas(ideas){
+  return ideas.map((it,i)=>{
+    const slides=(it.slides||[]).map(s=>({tag:String(s.role||"HOOK").toUpperCase().replace("FLAVOR","LINEUP"),
+      head:String(s.headline||"").toUpperCase(),badge:s.badge||"",
+      productRef:(typeof s.productRef==="number"?s.productRef:null)}));
+    return {id:i+1,tone:cleanTxt(it.tone)||"Idea",title:cleanTxt(it.title)||("Idea "+(i+1)),
+      idea:cleanTxt(it.idea),caption:cleanTxt(it.caption),
+      roles:slides.length?slides:[{tag:"HOOK",head:(cleanTxt(it.title)||"HELLO").toUpperCase(),badge:"",productRef:null}],
+      photoCount:Math.max(1,Math.min(5,slides.length||3)),postType:it.postType||"carousel",
+      rendered:false,scheduled:false,slides:[]};
+  });
+}
+
+$("#ideasBtn").onclick=genIdeas;
+async function genIdeas(){
+  if(!brand){toast("Read a brand first");return;}
+  state.direction=$("#direction").value.trim();
+  const n=Math.max(1,Math.min(8,+$("#ideaCount").value||3));
+  const btn=$("#ideasBtn");btn.disabled=true;
+  $("#empty").style.display="none";
+  renderSkeletons(n);startLoadbar();
+  try{
+    if(SERVED&&API.openrouterKey){
+      const r=await fetch("/api/ideas",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({brand,direction:state.direction,count:n})});
+      const j=await r.json();
+      if(!r.ok||!j.ideas)throw new Error(j.error||("HTTP "+r.status));
+      state.posts=fromAiIdeas(j.ideas);
+    }else{
+      await new Promise(r=>setTimeout(r,1400));
+      state.posts=demoIdeas(n);
+    }
+    drawRows();persistState();
+    toast(`${state.posts.length} idea${state.posts.length>1?"s":""} ready`);
+  }catch(e){
+    $("#rows").innerHTML="";$("#empty").style.display="";
+    toast("Ideas failed: "+esc(e.message||e),5200);
+  }finally{stopLoadbar();btn.disabled=false;}
+}
+function demoIdeas(n){
+  const seeds=[
+    {tone:"Golden hour hero",title:"Afternoon glow",idea:"A sun-soaked hero shot of the flagship bottle on a picnic blanket, condensation catching the light.",caption:"Golden hour called.\n\nIt wants a glass of something botanical.\n\nFind your flavor at the link.\n\n#slowafternoons #sparklingbotanicals"},
+    {tone:"Lineup flat lay",title:"Meet the family",idea:"The full flavor lineup fanned out over the brand palette with hand-written labels.",caption:"Five flavors. One golden rule: sip slowly.\n\nWhich one is yours?\n\nTell us below.\n\n#flavorlineup #craftsoda"},
+    {tone:"Why we made it",title:"The honest label",idea:"A close-up of the ingredient label with warm annotations explaining each botanical.",caption:"No mystery syrup. Just botanicals you can pronounce.\n\nRead the label, then taste the difference.\n\nLink in bio.\n\n#cleanlabel #botanicals"},
+  ];
+  return fromAiIdeas(Array.from({length:n},(_,i)=>{
+    const s=seeds[i%seeds.length];
+    return {...s,postType:"carousel",slides:[{role:"HOOK",headline:s.title.toUpperCase(),badge:"",productRef:null},
+      {role:"LINEUP",headline:"THE LINEUP",badge:"",productRef:null},
+      {role:"SHOP",headline:"SIP SLOWLY",badge:"",productRef:null}].slice(0,1+(i%3))};
+  }));
+}
+
+/* ================= row drawing ================= */
+function renderSkeletons(n){
+  let h="";
+  for(let i=0;i<n;i++)h+=`<div class="row skel"><div class="row-top"><span class="row-num">${i+1}</span><span class="sk-line"></span></div><div class="sk-body"><div class="sk-block"></div><div class="sk-block"></div><div class="sk-block"></div></div></div>`;
+  $("#rows").innerHTML=h;
+}
+function heroProductImg(p){
+  const prods=brand&&brand.productImages||[];
+  const ref=(p.roles||[]).map(r=>r.productRef).find(x=>x!=null);
+  return imgUrl(ref!=null&&prods[ref]?prods[ref]:prods[0])||"";
+}
+function slideSvg(role,i){
+  const C=(brand&&brand.colors||[]).filter(c=>/^#/.test(c));
+  const bg=C[i%Math.max(1,C.length)]||"#e2725b",ac=C[(i+2)%Math.max(1,C.length)]||"#f4c95d";
+  const head=esc((role&&role.head)||"");
+  return `<svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="500" fill="${bg}"/>
+    <polygon points="0,310 400,240 400,500 0,500" fill="${ac}" opacity=".9"/>
+    <text x="28" y="70" font-family="Georgia,serif" font-size="30" font-weight="700" fill="#fff" style="text-transform:uppercase">${head.slice(0,14)}</text>
+    <text x="28" y="104" font-family="Georgia,serif" font-size="30" font-weight="700" fill="#fff">${head.slice(14,28)}</text>
+    <text x="28" y="472" font-family="monospace" font-size="13" fill="#fff" opacity=".85">${esc((brand&&brand.name||"").toUpperCase())}</text>
+  </svg>`;
+}
+function slideURL(s){if(!s)return"";return s.savedPath||s.url||"";}
+function drawRows(){
+  $("#empty").style.display=state.posts.length?"none":"";
+  $("#rows").innerHTML=state.posts.map(p=>{
+    const thumbs=Array.from({length:p.photoCount},(_,i)=>{
+      const role=p.roles[i]||p.roles[0]||{tag:"HOOK",head:""};
+      const s=p.slides[i];
+      const inner=s&&s.failed?`<span class="failed">${esc(s.failed).slice(0,80)}</span>`
+        :(slideURL(s)?`<img src="${esc(slideURL(s))}" loading="lazy">`:slideSvg(role,i));
+      return `<div class="slide-card"><div class="slide-thumb" data-p="${p.id}" data-i="${i}">
+        <span class="role-chip">${esc(role.tag||"")}</span>${inner}<span class="slide-n">${i+1}</span></div></div>`;
+    }).join("");
+    return `<div class="row ${p.scheduled?"scheduled":""}" id="row${p.id}">
+      <div class="row-top"><span class="row-num">${p.id}</span>
+        <div><div class="row-tone">${esc(p.tone)}</div><div class="row-title">${esc(p.title)}</div></div></div>
+      <div class="row-idea">${esc(p.idea)}</div>
+      <div class="cap-label">Caption (tap to edit)</div>
+      <div class="row-caption" contenteditable spellcheck="false" data-p="${p.id}">${esc(p.caption)}</div>
+      <div class="slides-strip">${thumbs}</div>
+      <div class="render-note" id="note${p.id}"></div>
+      <div class="row-actions">
+        <div class="slide-count">Slides <input type="number" min="1" max="5" value="${p.photoCount}" data-p="${p.id}" ${p.rendered?"disabled":""}></div>
+        <button class="btn" id="renderCarousel${p.id}" ${(p.scheduled||(p.rendered&&p.postType!=="carousel"))?"disabled":""}>${(p.rendered&&p.postType==="carousel")?"Re-render":"Render carousel"}</button>
+        <button class="btn" id="renderStory${p.id}" ${(p.scheduled||(p.rendered&&p.postType!=="story"))?"disabled":""}>${(p.rendered&&p.postType==="story")?"Re-render":"Render story"}</button>
+        <button class="btn ghost" id="open${p.id}" ${p.rendered?"":"disabled"}>Open</button>
+        <span class="cost-hint">each slide is a paid render</span>
+      </div>
+    </div>`;
+  }).join("");
+  state.posts.forEach(p=>{
+    $(`#renderCarousel${p.id}`).onclick=()=>{p.postType="carousel";genCarousel(p);};
+    $(`#renderStory${p.id}`).onclick=()=>{p.postType="story";genCarousel(p);};
+    $(`#open${p.id}`).onclick=()=>openPreview(p);
+  });
+  $("#rows").querySelectorAll(".row-caption").forEach(el=>{
+    el.onblur=()=>{const p=state.posts.find(x=>x.id==+el.dataset.p);if(p){p.caption=el.textContent;persistState();}};
+  });
+  $("#rows").querySelectorAll(".slide-count input").forEach(inp=>{
+    inp.onchange=()=>{const p=state.posts.find(x=>x.id==+inp.dataset.p);
+      if(p){p.photoCount=Math.max(1,Math.min(5,+inp.value||1));drawRows();persistState();}};
+  });
+  $("#rows").querySelectorAll(".slide-thumb").forEach(th=>{
+    th.onclick=()=>{
+      const p=state.posts.find(x=>x.id==+th.dataset.p);const i=+th.dataset.i;
+      const s=p&&p.slides[i];const u=slideURL(s);
+      openLightbox(u?`<img src="${esc(u)}">`:slideSvg(p.roles[i]||{},i));
+    };
+  });
+}
+
+/* ================= render prompt (proven, ported) ================= */
+function slidePrompt(post,role,i,n){
+  const C=brand.colors||[],pal=C.slice(0,5).join(", "),c1=C[0]||"#c19a4b",c2=C[1]||"#1b1812";
+  const font=(brand.fonts&&brand.fonts.display)||"a clean modern sans-serif";
+  const dir=state.direction||"on-brand";
+  const concept=(post.idea||"").slice(0,160);
+  const ref=(role&&role.productRef!=null)?" A reference photo of the real product is provided - use it as the EXACT product: preserve its real shape, colour, packaging and label, and place it naturally in the scene. Do not invent a different product."
+    :` Feature the real ${brand.name} product, shot in a style that suits the brand.`;
+  const logoNote=(useLogo&&brand.logo)?" A reference image of the brand's REAL logo is provided - reproduce that EXACT logo (its exact wordmark, symbol, and colors) wherever the brand mark appears. Do not invent a different logo, symbol, or color scheme for it.":"";
+  const isStory=post.postType==="story",kind=isStory?"story":"carousel";
+  const shopNote=(role.tag||"").toUpperCase()==="SHOP"
+    ? ` This is the SHOP slide - it is the ONLY slide in the ${kind} allowed to show pricing, cost, tiers, a comparison table, or an order/buy call-to-action.`
+    : ` Do NOT show pricing, cost, tiers, a comparison table, or an order/buy call-to-action anywhere in this slide - that content belongs only on this ${kind}'s SHOP slide. This slide must have its own distinct visual concept, not a repeat of another slide's layout.`;
+  const opening=isStory
+    ? `A finished, production-ready 1080x1920 vertical Instagram/Facebook Story slide (${i+1} of ${n}) for the real brand ${brand.name}. Instagram/Facebook overlay their own UI (profile tag and reply bar) at the very top and bottom of a Story, so keep the headline and any key visual content within the safe middle area, comfortably clear of the top and bottom 12% of the frame.`
+    : `A finished, production-ready 1080x1350 vertical Instagram carousel slide (${i+1} of ${n}) for the real brand ${brand.name}.`;
+  return `${opening} This slide's job: ${role.tag}. ${isStory?"Story":"Carousel"} concept: ${concept}. Art direction: ${dir}. The layout, props, lighting, typography and mood must clearly reflect this and the brand's own visual identity, not a generic template. Use the brand's actual palette: ${pal} (lead with ${c1} and ${c2}). Set the headline "${role.head}" in a typeface like "${font}" (or a close match). CRITICAL TYPOGRAPHY RULE: the COMPLETE headline - every word, every letter - must be fully visible inside the slide with comfortable margins on all sides. Choose a type size SMALL enough that the whole headline fits; if it is long, use more lines or smaller type. NEVER let text run off the edge, never crop, truncate or cut off any word or letter. STRICTLY no em dash or en dash anywhere in any text rendered on this slide - if punctuation is needed, use a period, comma, or a plain hyphen with spaces around it instead.${ref}${logoNote}${shopNote} Keep palette and type consistent across slides, but make it look unmistakably like ${brand.name}, not a generic AI ${kind}. Do NOT add any corner sticker or badge, no page number or slide counter, no footer bar, and no brand address, city, location, or series/collection line. No watermark, no placeholder text.`;
+}
+
+/* ================= render carousel - SEQUENTIAL, one paid render at a time ================= */
+async function genCarousel(p){
+  const btn=$(`#render${p.postType==="story"?"Story":"Carousel"}${p.id}`);if(btn)btn.disabled=true;
+  const note=$(`#note${p.id}`);note.classList.add("show");
+  p.roles=p.roles.slice(0,p.photoCount);
+  while(p.roles.length<p.photoCount)p.roles.push({tag:"LINEUP",head:(p.title||"").toUpperCase(),badge:"",productRef:null});
+  p.slides=p.roles.map(r=>({role:r.tag}));
+  const total=p.photoCount;
+  if(SERVED&&API.falKey){
+    const moodUrl=(brand.imagery&&brand.imagery.length)?imgUrl(brand.imagery[0]):"";
+    for(let i=0;i<total;i++){
+      const role=p.roles[i];
+      note.textContent=`Rendering slide ${i+1} of ${total}...`;
+      const refs=[];
+      if(role.productRef!=null&&brand.productImages&&brand.productImages[role.productRef]){
+        const u=imgUrl(brand.productImages[role.productRef]);if(u)refs.push(u);
+      }
+      if(useLogo&&brand.logo)refs.push(brand.logo);
+      if(moodUrl&&refs.length<3)refs.push(moodUrl);
+      let ok=false,lastErr="";
+      for(let a=0;a<3&&!ok;a++){
+        if(a)await new Promise(r=>setTimeout(r,900*a));
+        try{
+          const res=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({prompt:slidePrompt(p,role,i,total),imageUrls:refs,postType:p.postType})});
+          const j=await res.json().catch(()=>({}));
+          if(res.ok&&j.images&&j.images[0]){p.slides[i].url=j.images[0];ok=true;}
+          else lastErr=j.error||("HTTP "+res.status);
+        }catch(e){lastErr=e.message||"network error";}
+      }
+      if(!ok){p.slides[i].failed=lastErr;toast(`Slide ${i+1} failed: ${esc(lastErr)}`,5000);}
+      drawRows();  // show each slide as it lands
+    }
+    note.textContent="";
+  }else{
+    note.textContent="Demo render (add FAL_KEY for real images)";
+    await new Promise(r=>setTimeout(r,900));
+  }
+  note.classList.remove("show");
+  p.rendered=true;drawRows();persistState();persistRender(p);
+}
+
+/* save rendered slides to disk so they survive Fal URL expiry + reloads */
+async function persistRender(p){
+  if(!SERVED)return;
+  for(let i=0;i<(p.slides||[]).length;i++){
+    const s=p.slides[i];if(!s||!s.url||s._saved||!/^https?:/i.test(s.url))continue;
+    s._saved=true;
+    try{
+      const j=await (await fetch("/api/store-image",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({url:s.url,brand:brand.name,postId:p.id,slide:i+1,role:s.role||""})})).json();
+      if(j&&j.path)s.savedPath=j.path;else s._saved=false;
+    }catch(e){s._saved=false;}
+  }
+  persistState();
+}
+
+/* ================= preview + schedule ================= */
+let ovPost=null;
+function renderModalPlatforms(){
+  const labels={instagram:"Instagram",tiktok:"TikTok",facebook:"Facebook",pinterest:"Pinterest",twitter:"Twitter"};
+  const wrap=$("#modalPlatforms");wrap.innerHTML="";
+  for(const plat of ["instagram","tiktok","facebook","pinterest","twitter"]){
+    const input=document.createElement("input");input.type="checkbox";
+    input.checked=!!state.platforms[plat].on;
+    input.disabled=!state.platforms[plat].accountId;
+    input.onchange=e=>{state.platforms[plat].on=e.target.checked;persistState();};
+    const label=document.createElement("label");
+    label.classList.toggle("disabled",input.disabled);
+    label.append(input,document.createTextNode(labels[plat]));
+    wrap.appendChild(label);
+  }
+}
+function openPreview(p){
+  ovPost=p;
+  $("#ovTitle").textContent=p.title;
+  $("#ovCap").textContent=p.caption;
+  const stage=$("#ovStage");stage.innerHTML="";
+  for(let i=0;i<p.photoCount;i++){
+    const s=p.slides[i];const u=slideURL(s);
+    const d=document.createElement("div");d.className="ov-slide";
+    d.innerHTML=(u?`<img src="${esc(u)}">`:slideSvg(p.roles[i]||{},i))+
+      `<span class="role-chip">${esc((p.roles[i]||{}).tag||"")}</span><span class="slide-n">${i+1}</span>`;
+    d.onclick=()=>openLightbox(u?`<img src="${esc(u)}">`:slideSvg(p.roles[i]||{},i));
+    stage.appendChild(d);
+  }
+  // default schedule slot: tomorrow, same hour, at :43 (odd minute, never on the hour)
+  const t=new Date(Date.now()+24*3600*1000);t.setMinutes(43,0,0);
+  $("#schedDate").value=t.toISOString().slice(0,10);
+  $("#schedTime").value=t.toTimeString().slice(0,5);
+  const sb=$("#ovSched");
+  sb.disabled=!!p.scheduled;
+  sb.textContent=p.scheduled?"Scheduled":"Schedule";
+  $("#schedOk").className="sched-ok"+(p.scheduled?" show":"");
+  $("#schedOk").textContent=p.scheduled?"Already scheduled. See it in Blotato via View scheduled.":"";
+  renderModalPlatforms();
+  $("#ovModal").classList.add("show");
+}
+$("#ovClose").onclick=()=>$("#ovModal").classList.remove("show");
+$("#ovCap").addEventListener("blur",()=>{if(ovPost){ovPost.caption=$("#ovCap").textContent;drawRows();persistState();}});
+
+$("#ovSched").onclick=async()=>{
+  const p=ovPost;if(!p||p.scheduled)return;
+  // slideURL() is the SAME resolution the preview already used to show these slides
+  // (savedPath local backup first, then the original url) - scheduling now uses that exact
+  // value instead of demanding a raw https url on s.url, so if a slide is visibly rendered on
+  // screen it is always schedulable, even if its Fal url expired or the saved state lost it.
+  const imageUrls=(p.slides||[]).map(s=>slideURL(s)).filter(u=>!!u);
+  if(!p.rendered||!imageUrls.length){toast("Render the carousel first, nothing to schedule",3800);return;}
+  const checkedTargets=["instagram","tiktok","facebook","pinterest","twitter"].filter(plat=>state.platforms[plat].on)
+    .map(plat=>({platform:plat,accountId:state.platforms[plat].accountId,pageId:state.platforms.facebook.pageId,boardId:state.platforms.pinterest.boardId}));
+  const skipped=p.postType==="story"?checkedTargets.filter(t=>!["instagram","facebook"].includes(t.platform)).map(t=>t.platform):[];
+  const skipNote=skipped.length?`${skipped.map(x=>x[0].toUpperCase()+x.slice(1)).join("/")} don't support Story posts, skipped`:"";
+  const targets=p.postType==="story"?checkedTargets.filter(t=>["instagram","facebook"].includes(t.platform)):checkedTargets;
+  if(!targets.length){toast((p.postType==="story"?"Check Instagram or Facebook to post a Story":"Check at least one platform to post to")+(skipNote?`. ${skipNote}`:""),4600);return;}
+  if(SERVED)for(const t of targets){
+    if(!t.accountId){toast("Choose your account in the left sidebar first",3800);return;}
+    if(t.platform==="facebook"&&!t.pageId){toast("Choose your account in the left sidebar first",3800);return;}
+    if(t.platform==="pinterest"&&!t.boardId){toast("Choose your account in the left sidebar first",3800);return;}
+  }
+  const dateVal=$("#schedDate").value.trim(),timeVal=$("#schedTime").value.trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)){toast("Date must be YYYY-MM-DD, e.g. 2026-07-13",4200);return;}
+  if(!/^\d{2}:\d{2}$/.test(timeVal)){toast("Time must be HH:MM (24h), e.g. 14:30",4200);return;}
+  const when=new Date(dateVal+"T"+timeVal);
+  if(isNaN(when)){toast("That date/time isn't valid, e.g. 2026-07-13 and 14:30",4200);return;}
+  if(!(when>new Date())){toast("Pick a time in the future",3600);return;}
+  const sb=$("#ovSched");sb.disabled=true;
+  const ok=[],failed=[];
+  if(p.postType!=="story"){
+    if(SERVED){
+      for(let i=0;i<targets.length;i++){
+        const t=targets[i];
+        sb.textContent=`Scheduling ${t.platform} (${i+1}/${targets.length})...`;
+        // stagger each platform 20 min after the last - never fire identical content to every
+        // platform at the same minute
+        const at=new Date(when.getTime()+i*20*60*1000);
+        try{
+          const r=await fetch("/api/schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({caption:p.caption,imageUrls,accountId:t.accountId,platform:t.platform,
+              pageId:t.pageId,boardId:t.boardId,scheduledTime:at.toISOString()})});
+          const j=await r.json().catch(()=>({}));
+          if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
+          ok.push(t.platform);
+        }catch(e){failed.push(`${t.platform}: ${e.message||e}`);}
+      }
+    }else{ok.push(...targets.map(t=>t.platform));}
+  }else if(SERVED){
+    for(let i=0;i<targets.length;i++){
+      const t=targets[i];
+      for(let slideIndex=0;slideIndex<imageUrls.length;slideIndex++){
+        sb.textContent=`Scheduling ${t.platform} slide ${slideIndex+1}/${imageUrls.length} (${i+1}/${targets.length})...`;
+        const at=new Date(when.getTime()+i*20*60*1000+slideIndex*2*60*1000);
+        const label=`${t.platform} slide ${slideIndex+1}`;
+        try{
+          const r=await fetch("/api/schedule",{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({caption:p.caption,imageUrls:[imageUrls[slideIndex]],accountId:t.accountId,platform:t.platform,
+              pageId:t.pageId,boardId:t.boardId,scheduledTime:at.toISOString(),mediaType:"story"})});
+          const j=await r.json().catch(()=>({}));
+          if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
+          ok.push(label);
+        }catch(e){failed.push(`${label}: ${e.message||e}`);}
+      }
+    }
+  }else{
+    for(const t of targets)for(let slideIndex=0;slideIndex<imageUrls.length;slideIndex++)ok.push(`${t.platform} slide ${slideIndex+1}`);
+  }
+  sb.disabled=false;
+  if(failed.length){
+    sb.textContent="Schedule";
+    toast((ok.length?`${ok.join(", ")} scheduled. `:"")+"Failed: "+esc(failed.join(" | "))+(skipNote?`. ${skipNote}`:""),6800);
+    if(ok.length){$("#schedOk").className="sched-ok show";
+      $("#schedOk").textContent=`${ok.join(", ")} scheduled. ${failed.length} failed - fix and retry those platforms only (do not re-click Schedule, it would duplicate the ones that worked).${skipNote?` ${skipNote}.`:""}`;}
+    return;
+  }
+  p.scheduled=true;sb.textContent="Scheduled";
+  $("#schedOk").className="sched-ok show";
+  $("#schedOk").textContent=`Scheduled to ${ok.join(", ")} starting ${when.toLocaleString()}. See it in Blotato via View scheduled.${skipNote?` ${skipNote}.`:""}`;
+  drawRows();persistState();
+  toast("Scheduled to "+ok.join(", ")+(skipNote?`. ${skipNote}`:""));
+};
+
+/* ================= reset + boot ================= */
+$("#resetBtn").onclick=()=>{
+  if(!confirm("Clear the brand and all ideas?"))return;
+  brand=null;state={direction:"",posts:[],accountId:state.accountId,platforms:state.platforms};
+  localStorage.removeItem("muse-state");
+  $("#urlInput").value="";$("#direction").value="";
+  $("#rows").innerHTML="";$("#warnBox").innerHTML="";
+  drawBrand();$("#empty").style.display="";
+  toast("Cleared");
+};
+
+(async function boot(){
+  restoreState();
+  restoreCustomBrands();
+  await checkApi();
+  await loadAccounts();
+  if(SERVED){
+    try{
+      const j=await (await fetch("/api/brand")).json();
+      if(j&&j.brand){brand=j.brand;$("#urlInput").value=brand.url||"";}
+    }catch(e){}
+  }
+  if(brand)drawBrand();
+  if(state.direction)$("#direction").value=state.direction;
+  if(state.posts.length)drawRows();
+})();
+</script>
+</body>
+</html>

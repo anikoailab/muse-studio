@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muse Studio - Audit Report</title>
+<style>
+:root{--paper:#faf7f2;--ink:#1b1812;--soft:#6d6558;--line:#e2dbcd;--gold:#c19a4b;--card:#fffdf9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,system-ui,sans-serif;font-size:15px;line-height:1.6;padding:40px 24px}
+.wrap{max-width:1060px;margin:0 auto}
+h1{font-family:Fraunces,Georgia,serif;font-size:34px;font-weight:600;margin-bottom:4px}
+h1 em{font-style:italic;font-weight:300;color:var(--gold)}
+h2{font-family:Fraunces,Georgia,serif;font-size:22px;font-weight:600;margin:44px 0 14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sub{color:var(--soft);margin-bottom:6px}
+.badge{display:inline-block;background:#3d9a5f;color:#fff;font-weight:700;font-size:13px;letter-spacing:.06em;border-radius:99px;padding:5px 16px;margin:14px 0}
+table{border-collapse:collapse;width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:#f3eee5;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+tr:last-child td{border-bottom:none}
+.pass{color:#3d9a5f;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
+.grid.two{grid-template-columns:repeat(2,1fr)}
+figure{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 8px 28px rgba(27,24,18,.07)}
+figure img{width:100%;border-radius:8px;display:block}
+figcaption{font-size:12px;color:var(--soft);padding:8px 4px 2px;text-align:center}
+ul{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13.5px}
+@media(max-width:800px){.grid,.grid.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Muse <em>Studio</em> · Audit Report</h1>
+  <div class="sub">2026-07-12 · pataks.ca · bluedragon.ca · alfez.ca · driven through a real browser end to end</div>
+  <span class="badge">AUDIT PASSED</span>
+
+  <h2>The finished slides (rendered by the app, saved to renders/)</h2>
+  <div class="grid">
+    <figure><img src="../renders/patak-s/post1_slide1_hook.png" alt=""><figcaption>Patak's · hook slide · real logo + product</figcaption></figure>
+    <figure><img src="../renders/blue-dragon/post1_slide1_hook.png" alt=""><figcaption>Blue Dragon · hook slide · the brand the old app failed on</figcaption></figure>
+    <figure><img src="../renders/al-fez-canada/post1_slide1_hook.png" alt=""><figcaption>Al'Fez · hook slide · also used for the scheduling test</figcaption></figure>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <figure><img src="../renders/patak-s/post1_slide2_lineup.png" alt=""><figcaption>Patak's · lineup slide (slide 2 of the same carousel)</figcaption></figure>
+  </div>
+
+  <h2>Scorecard</h2>
+  <table>
+    <tr><th>Check</th><th>Patak's</th><th>Blue Dragon</th><th>Al'Fez</th></tr>
+    <tr><td>Palette (3+ real colors)</td><td class="pass">PASS (6)</td><td class="pass">PASS (6, AI-sampled)</td><td class="pass">PASS (3, junk filtered)</td></tr>
+    <tr><td>Brand voice extracted</td><td class="pass">PASS</td><td class="pass">PASS (AI)</td><td class="pass">PASS (AI)</td></tr>
+    <tr><td>Product photos found</td><td>12</td><td>12</td><td>12</td></tr>
+    <tr><td>Ideas + captions, no em dashes</td><td class="pass">PASS</td><td class="pass">PASS</td><td class="pass">PASS</td></tr>
+    <tr><td>Slides rendered</td><td class="pass">2/2</td><td class="pass">2/2</td><td class="pass">3/3</td></tr>
+    <tr><td>Console errors</td><td>0</td><td>0</td><td>0</td></tr>
+  </table>
+
+  <h2>The app itself</h2>
+  <div class="grid two">
+    <figure><img src="screenshots/pataks-1-brand.png" alt=""><figcaption>Brand system panel after reading pataks.ca</figcaption></figure>
+    <figure><img src="screenshots/bluedragon-2-ideas.png" alt=""><figcaption>Generated ideas for Blue Dragon</figcaption></figure>
+    <figure><img src="screenshots/pataks-3-rendered.png" alt=""><figcaption>Rendered carousel row (Patak's)</figcaption></figure>
+    <figure><img src="screenshots/schedule-2-confirmed.png" alt=""><figcaption>Schedule confirmed (arianasolen.ai, 30 days out)</figcaption></figure>
+  </div>
+
+  <h2>Blotato scheduling test (spam-safe)</h2>
+  <ul>
+    <li>ONE post scheduled through the app's own account picker to arianasolen.ai (43679), 30 days in the future at an odd minute.</li>
+    <li>Verified present in the Blotato queue via the API (schedule id 2479811).</li>
+    <li>Deleted immediately and deletion confirmed. Nothing reached Instagram.</li>
+  </ul>
+
+  <h2>Cost + coverage</h2>
+  <ul>
+    <li>7 paid renders total, about $1.50 of the $5 budget. Idea and enrichment calls: a few cents.</li>
+    <li>51 unit tests green. Static server hardened: env.local and source files return 404 over HTTP.</li>
+    <li>Full written report: <b>audit/AUDIT.md</b> · App: <b>python3 server.py</b> then <b>localhost:5057</b></li>
+  </ul>
+
+  <div class="note"><b>Next step:</b> Railway deploy behind a username/password. Needs a Railway account (about 2 minutes to create), then one command pushes the keys and puts it live.</div>
+</div>
+</body>
+</html>

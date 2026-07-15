@@ -1,0 +1,2 @@
+# Intentionally empty - Muse Studio uses only the Python standard library.
+# This file exists so Railway/Nixpacks detects a Python app.
