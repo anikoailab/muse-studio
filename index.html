@@ -799,7 +799,9 @@ function fromAiIdeas(ideas){
   return ideas.map((it,i)=>{
     const slides=(it.slides||[]).map(s=>({tag:String(s.role||"HOOK").toUpperCase().replace("FLAVOR","LINEUP"),
       head:String(s.headline||"").toUpperCase(),badge:s.badge||"",
-      productRef:(typeof s.productRef==="number"?s.productRef:null)}));
+      productRef:(typeof s.productRef==="number"?s.productRef:null),
+      productRefs:Array.isArray(s.productRefs)?s.productRefs.filter(n=>typeof n==="number").slice(0,3)
+        :(typeof s.productRef==="number"?[s.productRef]:[])}));
     return {id:i+1,tone:cleanTxt(it.tone)||"Idea",title:cleanTxt(it.title)||("Idea "+(i+1)),
       idea:cleanTxt(it.idea),caption:cleanTxt(it.caption),
       roles:slides.length?slides:[{tag:"HOOK",head:(cleanTxt(it.title)||"HELLO").toUpperCase(),badge:"",productRef:null}],
@@ -927,8 +929,10 @@ function slidePrompt(post,role,i,n){
   const font=(brand.fonts&&brand.fonts.display)||"a clean modern sans-serif";
   const dir=state.direction||"on-brand";
   const concept=(post.idea||"").slice(0,160);
-  const ref=(role&&role.productRef!=null)?" A reference photo of the real product is provided - use it as the EXACT product: preserve its real shape, colour, packaging and label, and place it naturally in the scene. Do not invent a different product."
-    :` Feature the real ${brand.name} product, shot in a style that suits the brand.`;
+  const nRefs=(role&&Array.isArray(role.productRefs)&&role.productRefs.length)?Math.min(role.productRefs.length,3):(role&&role.productRef!=null?1:0);
+  const ref=nRefs>0
+    ? ` The first ${nRefs===1?"reference photo provided is the real product":nRefs+" reference photos provided are the real products"} - reproduce ${nRefs===1?"it":"each of them"} EXACTLY: preserve the real bottle/pack shape, colour, packaging and label, and place ${nRefs===1?"it":"them"} naturally in the scene. STRICT PRODUCT RULE: show ONLY the product${nRefs===1?"":"s"} present in the reference photos - never invent, redesign, or add any other bottle, jar, or pack, and if the concept mentions a product with no reference photo, leave it out rather than imagining it.`
+    : ` Feature the real ${brand.name} product, shot in a style that suits the brand.`;
   const logoNote=(useLogo&&brand.logo)?" A reference image of the brand's REAL logo is provided - reproduce that EXACT logo (its exact wordmark, symbol, and colors) wherever the brand mark appears. Do not invent a different logo, symbol, or color scheme for it.":"";
   const isStory=post.postType==="story",kind=isStory?"story":"carousel";
   const shopNote=(role.tag||"").toUpperCase()==="SHOP"
@@ -954,8 +958,11 @@ async function genCarousel(p){
       const role=p.roles[i];
       note.textContent=`Rendering slide ${i+1} of ${total}...`;
       const refs=[];
-      if(role.productRef!=null&&brand.productImages&&brand.productImages[role.productRef]){
-        const u=imgUrl(brand.productImages[role.productRef]);if(u)refs.push(u);
+      const prefs=(Array.isArray(role.productRefs)&&role.productRefs.length)?role.productRefs
+        :(role.productRef!=null?[role.productRef]:[]);
+      for(const pi of prefs.slice(0,3)){
+        const im=brand.productImages&&brand.productImages[pi];
+        if(im){const u=imgUrl(im);if(u)refs.push(u);}
       }
       if(useLogo&&brand.logo)refs.push(brand.logo);
       if(moodUrl&&refs.length<3)refs.push(moodUrl);

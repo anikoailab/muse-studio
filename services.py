@@ -136,14 +136,14 @@ def ideas_prompt(brand, direction, n, nprod=0):
     if nprod:
         photo_note = (
             "\nIMPORTANT - you are shown real PRODUCT photo(s) below, each labelled PRODUCT[k] where k is its index number, "
-            "plus some IMAGERY mood photo(s). Look at them. For EACH slide, set \"productRef\" to the index number k of the single "
-            "product photo that best fits that slide - match the product/colour to the slide (e.g. a slide about the purple product "
-            "picks the purple product photo). Use null only when no product photo fits (e.g. a pure text hook). Within one idea's "
-            "slides, do NOT assign the same productRef to more than one slide when other distinct product photos are available - "
-            "vary which photo each slide uses so the carousel doesn't look like the same image repeated. "
+            "plus some IMAGERY mood photo(s). Look at them. For EACH slide, set \"productRefs\" to the list of index numbers of "
+            "EVERY product photo that slide actually shows - one entry per product in the scene, up to 3. A slide about one sauce "
+            "lists one index; a duo slide lists both indexes. Match the product/colour to the slide (e.g. a slide about the purple "
+            "product picks the purple product photo). Use an empty list only when no product appears (e.g. a pure text hook). "
+            "Within one idea's slides, vary which photos the slides use so the carousel doesn't look like the same image repeated. "
             "Let the IMAGERY photos guide the overall vibe of every idea.\n"
         )
-        ref_field = '    "productRef": <the index number k of the best-matching PRODUCT photo for this slide, or null>\n'
+        ref_field = '    "productRefs": [<index numbers k of EVERY product photo this slide shows, up to 3; empty list if none>]\n'
     else:
         photo_note = ""
         ref_field = '    "productRef": null\n'
@@ -208,6 +208,14 @@ def parse_ideas(raw):
                 for k in ("headline", "badge"):
                     if k in slide:
                         slide[k] = _strip_dashes(slide[k])
+                # normalize product references: models may send productRefs (list) or the
+                # legacy productRef (single number). Emit BOTH so old and new frontends work.
+                refs = slide.get("productRefs")
+                if not isinstance(refs, list):
+                    refs = [slide.get("productRef")] if isinstance(slide.get("productRef"), int) else []
+                refs = [r for r in refs if isinstance(r, int)][:3]
+                slide["productRefs"] = refs
+                slide["productRef"] = refs[0] if refs else None
     return ideas
 
 
