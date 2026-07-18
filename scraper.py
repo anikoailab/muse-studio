@@ -710,15 +710,19 @@ def enrich_brand(brand, html_text):
 # ---- entry point -----------------------------------------------------------------
 
 def scrape_brand(url):
-    """Full two-pass scrape. Returns the brand dict with provenance under brand['sources']."""
+    """Full two-pass scrape. Returns the brand dict with provenance under brand['sources'].
+    GUARANTEE: each call returns FRESH data - no state carries over between scrapes."""
     brand, html = scrape_static(url)
     sources = {k: "scraped" for k in ("colors", "voice", "voiceTags")}
     brand, enriched = enrich_brand(brand, html)
     for f in enriched:
         sources[f] = "ai"
     brand["sources"] = sources
+    # If still no colors after both passes, use fallback - but ALWAYS return fresh fallback, never inherited
     if not brand.get("colors"):
         brand["colors"] = ["#1c1a16", "#6f6a5c", "#d9d3c6", "#f2efe8", "#c19a4b"]
         sources["colors"] = "default"
         brand.setdefault("warnings", []).append("No brand colors found. Edit the palette manually.")
+    # Voice can be empty if no meta description found - that's OK, return empty string (not default)
+    brand.setdefault("voice", "")
     return brand

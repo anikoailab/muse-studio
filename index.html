@@ -769,6 +769,7 @@ async function doScrape(){
     const j=await r.json();
     if(!r.ok||!j.brand)throw new Error(j.error||("HTTP "+r.status));
     brand=j.brand;
+    customBrands=[];persistBrand();
     drawBrand();
     note.className="scrape-note";
     note.textContent="Brand loaded. Edit anything that looks off, then set a direction.";
@@ -1136,12 +1137,14 @@ $("#resetBtn").onclick=()=>{
   restoreCustomBrands();
   await checkApi();
   await loadAccounts();
-  if(SERVED){
-    try{
-      const j=await (await fetch("/api/brand")).json();
-      if(j&&j.brand){brand=j.brand;$("#urlInput").value=brand.url||"";}
-    }catch(e){}
-  }
+  // Don't auto-load saved brand on startup - user starts fresh each session (no login yet).
+  // Once per-client login is added, this will restore the user's last brand.
+  // if(SERVED){
+  //   try{
+  //     const j=await (await fetch("/api/brand")).json();
+  //     if(j&&j.brand){brand=j.brand;$("#urlInput").value=brand.url||"";}
+  //   }catch(e){}
+  // }
   if(brand)drawBrand();
   if(state.direction)$("#direction").value=state.direction;
   if(state.posts.length)drawRows();
