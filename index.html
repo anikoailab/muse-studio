@@ -570,14 +570,20 @@ function populateAcctProfile(){
     sel.innerHTML=`<option value="">Choose your account</option>`+sorted.map(b=>
       `<option value="${esc(b.id)}">${esc(b.name||"(unnamed)")}</option>`).join("");
     const saved=sorted.find(brand=>_profileMatchesState(brand));
-    sel.value=saved?saved.id:"";
+    // auto-activate: a matching saved brand, or the only brand there is - so the schedule
+    // modal's checkboxes work without the user having to discover this dropdown first
+    if(saved){sel.value=saved.id;applyProfile(saved);}
+    else if(sorted.length===1){sel.value=sorted[0].id;applyProfile(sorted[0]);}
+    else sel.value="";
     return;
   }
   const sorted=[...accountProfiles.entries()].sort((a,b)=>a[1].label.localeCompare(b[1].label));
   sel.innerHTML=`<option value="">Choose your account</option>`+sorted.map(([key,p])=>
     `<option value="${esc(key)}">${esc(p.label)}</option>`).join("");
   const saved=sorted.find(([,profile])=>_profileMatchesState(profile));
-  sel.value=saved?saved[0]:"";
+  if(saved){sel.value=saved[0];applyProfile(saved[1]);}
+  else if(sorted.length===1){sel.value=sorted[0][0];applyProfile(sorted[0][1]);}
+  else sel.value="";
 }
 function _accountLabel(account){return account.username||account.fullname||account.name||account.handle||account.id||account.accountId||"Account";}
 function renderBrandsList(){
@@ -639,8 +645,7 @@ async function loadAccounts(){
     sel.innerHTML=`<option value="">Accounts unavailable</option>`;
   }
 }
-$("#acctProfile").onchange=e=>{
-  const profile=customBrands.length?customBrands.find(b=>b.id===e.target.value):accountProfiles.get(e.target.value);
+function applyProfile(profile){
   for(const plat of ["instagram","tiktok","facebook","pinterest","twitter"]){
     const entry=profile&&profile[plat];
     const enabled=!!entry?.accountId;
@@ -650,6 +655,9 @@ $("#acctProfile").onchange=e=>{
   }
   persistState();
   if($("#ovModal").classList.contains("show"))renderModalPlatforms();
+}
+$("#acctProfile").onchange=e=>{
+  applyProfile(customBrands.length?customBrands.find(b=>b.id===e.target.value):accountProfiles.get(e.target.value));
 };
 $("#manageBrandsBtn").onclick=()=>{renderBrandsList();$("#brandsModal").classList.add("show");};
 $("#brandsClose").onclick=()=>$("#brandsModal").classList.remove("show");
@@ -1018,6 +1026,12 @@ function renderModalPlatforms(){
     label.classList.toggle("disabled",input.disabled);
     label.append(input,document.createTextNode(labels[plat]));
     wrap.appendChild(label);
+  }
+  if([...wrap.querySelectorAll("input")].every(i=>i.disabled)){
+    const hint=document.createElement("span");
+    hint.style.cssText="flex-basis:100%;font-size:12px;color:var(--ink-soft)";
+    hint.textContent="No account is active yet. Pick your brand in the Connected accounts dropdown on the left (or set one up under Manage brands), then reopen this post.";
+    wrap.appendChild(hint);
   }
 }
 function openPreview(p){
