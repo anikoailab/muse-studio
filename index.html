@@ -260,6 +260,7 @@ a:hover{text-decoration:underline}
   <div class="api-pill"><span class="api-dot off" id="apiDot"></span><span id="apiLabel">checking</span></div>
   <div class="spacer"></div>
   <a class="tb-btn" href="https://my.blotato.com/queue/schedules" target="_blank" rel="noopener">View scheduled</a>
+  <button class="tb-btn" id="libraryBtn">Library</button>
   <button class="tb-btn" id="resetBtn">Reset</button>
   <button class="tb-btn" id="themeBtn">Dark</button>
 </div>
@@ -380,6 +381,17 @@ a:hover{text-decoration:underline}
         <button class="btn gold" id="ovSched">Schedule</button>
       </div>
       <div class="sched-ok" id="schedOk"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ render library ============ -->
+<div class="overlay" id="libModal">
+  <div class="ov-panel">
+    <button class="ov-close" id="libClose">&times;</button>
+    <div class="ov-scroll">
+      <div class="ov-title">Library</div>
+      <div id="libBody"></div>
     </div>
   </div>
 </div>
@@ -660,6 +672,23 @@ $("#acctProfile").onchange=e=>{
   applyProfile(customBrands.length?customBrands.find(b=>b.id===e.target.value):accountProfiles.get(e.target.value));
 };
 $("#manageBrandsBtn").onclick=()=>{renderBrandsList();$("#brandsModal").classList.add("show");};
+$("#libraryBtn").onclick=async()=>{
+  const body=$("#libBody");
+  body.innerHTML=`<div style="color:var(--ink-soft);font-size:13px">Loading your renders...</div>`;
+  $("#libModal").classList.add("show");
+  try{
+    const j=await (await fetch("/api/library")).json();
+    const brands=j.brands||[];
+    if(!brands.length){body.innerHTML=`<div style="color:var(--ink-soft);font-size:13px">Nothing here yet. Every slide you render is saved automatically and will show up in this library, grouped by brand.</div>`;return;}
+    body.innerHTML=brands.map(b=>
+      `<div style="margin-bottom:22px"><div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px">${esc(b.brand)} · ${b.files.length}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">`+
+      b.files.map(f=>`<img src="${esc(f.path)}" loading="lazy" data-full="${esc(f.path)}" style="width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in">`).join("")+
+      `</div></div>`).join("");
+    body.querySelectorAll("img[data-full]").forEach(img=>{img.onclick=()=>openLightbox(`<img src="${esc(img.dataset.full)}">`);});
+  }catch(e){body.innerHTML=`<div style="color:var(--ink-soft);font-size:13px">Could not load the library: ${esc(e.message||e)}</div>`;}
+};
+$("#libClose").onclick=()=>$("#libModal").classList.remove("show");
 $("#brandsClose").onclick=()=>$("#brandsModal").classList.remove("show");
 $("#addBrandBtn").onclick=()=>{customBrands.push(_blankBrand());renderBrandsList();};
 $("#saveBrandsBtn").onclick=()=>{

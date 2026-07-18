@@ -119,6 +119,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/brand"):
             s = _read_state()
             return self._json(200, {"brand": s}) if s else self._json(404, {"brand": None})
+        if self.path.startswith("/api/library"):
+            return self._library()
         if self.path.startswith("/api/subaccounts"):
             return self._subaccounts()
         if self.path.startswith("/api/accounts"):
@@ -357,6 +359,30 @@ class Handler(BaseHTTPRequestHandler):
         if not ideas:
             return self._json(502, {"error": "could not parse ideas JSON", "raw": raw[:400]})
         return self._json(200, {"ideas": ideas[:n], "model": S.IDEAS_MODEL, "products": len(prods)})
+
+    def _library(self):
+        """Every render saved under renders/, grouped by brand folder, newest first.
+        Paths are ROOT-relative so the static file server can serve them directly."""
+        base = os.path.join(ROOT, "renders")
+        brands = []
+        try:
+            for slug in os.listdir(base):
+                folder = os.path.join(base, slug)
+                if not os.path.isdir(folder):
+                    continue
+                files = []
+                for fn in os.listdir(folder):
+                    if not fn.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                        continue
+                    files.append({"path": "renders/%s/%s" % (slug, fn),
+                                  "mtime": int(os.path.getmtime(os.path.join(folder, fn)))})
+                if files:
+                    files.sort(key=lambda f: -f["mtime"])
+                    brands.append({"brand": slug.replace("-", " ").title(), "files": files})
+        except FileNotFoundError:
+            pass
+        brands.sort(key=lambda b: -b["files"][0]["mtime"])
+        return self._json(200, {"brands": brands})
 
     def _store_image(self, req):
         """Download a rendered slide (Fal URL) to disk so it survives URL expiry + reloads.
