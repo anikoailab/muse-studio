@@ -969,7 +969,9 @@ function slidePrompt(post,role,i,n){
   const nRefs=(role&&Array.isArray(role.productRefs)&&role.productRefs.length)?Math.min(role.productRefs.length,3):(role&&role.productRef!=null?1:0);
   const ref=nRefs>0
     ? ` The first ${nRefs===1?"reference photo provided is the real product":nRefs+" reference photos provided are the real products"} - reproduce ${nRefs===1?"it":"each of them"} EXACTLY: preserve the real bottle/pack shape, colour, packaging and label, and place ${nRefs===1?"it":"them"} naturally in the scene. STRICT PRODUCT RULE: show ONLY the product${nRefs===1?"":"s"} present in the reference photos - never invent, redesign, or add any other bottle, jar, or pack, and if the concept mentions a product with no reference photo, leave it out rather than imagining it.`
-    : ` Feature the real ${brand.name} product, shot in a style that suits the brand.`;
+    : ((brand.productImages||[]).length
+      ? ` STRICT PRODUCT RULE: this slide has NO product reference photo, so do NOT depict any packaged product at all - no bottle, jar, box, pouch, or labelled pack, not even in the background. Build the slide from typography, prepared food, scenery, and the brand's colors instead.`
+      : ` Feature the real ${brand.name} product, shot in a style that suits the brand.`);
   const logoNote=(useLogo&&brand.logo)?" A reference image of the brand's REAL logo is provided - reproduce that EXACT logo (its exact wordmark, symbol, and colors) wherever the brand mark appears. Do not invent a different logo, symbol, or color scheme for it.":"";
   const isStory=post.postType==="story",kind=isStory?"story":"carousel";
   const shopNote=(role.tag||"").toUpperCase()==="SHOP"

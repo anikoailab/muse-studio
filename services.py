@@ -138,8 +138,10 @@ def ideas_prompt(brand, direction, n, nprod=0):
             "\nIMPORTANT - you are shown real PRODUCT photo(s) below, each labelled PRODUCT[k] where k is its index number, "
             "plus some IMAGERY mood photo(s). Look at them. For EACH slide, set \"productRefs\" to the list of index numbers of "
             "EVERY product photo that slide actually shows - one entry per product in the scene, up to 3. A slide about one sauce "
-            "lists one index; a duo slide lists both indexes. Match the product/colour to the slide (e.g. a slide about the purple "
-            "product picks the purple product photo). Use an empty list only when no product appears (e.g. a pure text hook). "
+            "lists one index; a duo slide lists both indexes. If a slide's concept shows ANY product on screen - even a hook "
+            "comparing two packs - its productRefs MUST list every one of them; slides with an empty list will be rendered with "
+            "NO product visible at all. Match the product/colour to the slide (e.g. a slide about the purple product picks the "
+            "purple product photo). Use an empty list only for slides that genuinely show no product (pure text or scenery). "
             "Within one idea's slides, vary which photos the slides use so the carousel doesn't look like the same image repeated. "
             "Let the IMAGERY photos guide the overall vibe of every idea.\n"
         )
