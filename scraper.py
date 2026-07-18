@@ -7,7 +7,7 @@ Pass 2: AI enrichment (one small OpenRouter vision call) - fills the gaps Pass 1
 A scrape degrades gracefully - it returns warnings, it does not hard-fail because one
 rung of the fetch ladder or the enrichment call broke.
 """
-import os, re, json, shutil, subprocess, urllib.request, urllib.parse, urllib.error
+import os, re, json, time, shutil, subprocess, urllib.request, urllib.parse, urllib.error
 from html import unescape
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -94,6 +94,31 @@ def _fetch_jina(url, timeout=45):
     if len(txt) < 200:
         raise RuntimeError("jina reader returned empty")
     return txt
+
+
+def _fetch_jina_html(url, timeout=60):
+    """Reader fallback in HTML mode - Jina renders the page from its own IPs (which brand
+    sites don't wall off) and returns the full rendered HTML, images and colors included.
+    The rescue rung for sites that hand datacenter IPs (Railway) an empty shell that
+    passes _looks_blocked while carrying none of the real page."""
+    html = ""
+    for attempt in range(2):  # first render is sometimes cold/short - one retry heals it
+        if attempt:
+            time.sleep(3)
+        req = urllib.request.Request("https://r.jina.ai/" + url,
+            headers={"User-Agent": UA, "X-Return-Format": "html"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                html = r.read().decode("utf-8", "ignore")
+        except Exception:
+            continue
+        if len(html) >= 500:
+            break
+    if len(html) < 500:
+        raise RuntimeError("jina html reader returned empty")
+    if _looks_blocked(html):
+        raise RuntimeError("jina html reader hit the bot wall")
+    return html
 
 
 def _fetch_any(url, timeout=30):
@@ -550,11 +575,11 @@ def _visible_text(html, limit=3000):
 
 # ---- Pass 1: deterministic scrape ---------------------------------------------
 
-def scrape_static(url):
+def scrape_static(url, _html=None):
     url = url.strip()
     if not re.match(r"^https?://", url):
         url = "https://" + url
-    content, kind = _fetch_any(url)
+    content, kind = (_html, "html") if _html else _fetch_any(url)
     p = urlparse(url)
     origin = "%s://%s" % (p.scheme, p.netloc)
 
@@ -616,6 +641,15 @@ def scrape_static(url):
         "logo": logo,
         "warnings": [],
     }
+    if _html is None and not (brand["imagery"] or brand["productImages"] or brand["logo"] or brand["colors"]):
+        # The site answered but with an empty shell - the soft bot-wall that datacenter IPs
+        # (Railway) get served. Refetch the fully rendered page through the reader proxy
+        # and re-parse ONCE (_html guard stops recursion).
+        try:
+            return scrape_static(url, _html=_fetch_jina_html(url))
+        except Exception:
+            brand["warnings"].append("The site returned almost nothing to this server "
+                                     "(bot protection). Add photos and colors manually.")
     return brand, html
 
 
