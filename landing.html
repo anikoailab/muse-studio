@@ -12,37 +12,27 @@
   --font-display:"Fraunces",Georgia,serif;
   --font-body:"Inter",-apple-system,system-ui,sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,monospace;
-  --cw:clamp(150px,16vw,215px);
+  --cw:clamp(170px,17vw,245px);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6}
 
-/* ================= hero (100vh, cloud in the middle) ================= */
-.stage{position:relative;height:100vh;overflow:hidden;
-  background:radial-gradient(120% 120% at 50% 45%,#fffdf9 0%,var(--paper) 55%,#efe9dd 100%)}
-#scene{position:absolute;inset:0;perspective:1500px;perspective-origin:50% 52%;cursor:grab;z-index:1}
-#scene.dragging{cursor:grabbing}
-#world{position:absolute;left:50%;top:54%;transform-style:preserve-3d}
-.ph{position:absolute;left:0;top:0;width:var(--cw);border-radius:10px;
-  box-shadow:0 22px 55px rgba(27,24,18,.22);will-change:transform,opacity;
-  -webkit-user-drag:none;user-select:none;cursor:pointer;background:var(--paper-2)}
-
-/* top chrome */
-.topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:flex-start;
-  justify-content:space-between;padding:24px 34px;pointer-events:none}
-.wordmark{pointer-events:auto}
-.wordmark .brand{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.02em}
-.wordmark .brand em{font-style:italic;font-weight:500;color:var(--gold)}
-.wordmark .sub{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;
+/* ================= top band: text only, nothing overlaps it ================= */
+.topband{position:relative;z-index:20;text-align:center;padding:34px 24px 10px;
+  background:linear-gradient(180deg,#fffdf9 0%,var(--paper) 100%)}
+.chrome{position:absolute;top:24px;left:34px;text-align:left}
+.chrome .brand{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.02em}
+.chrome .brand em{font-style:italic;font-weight:500;color:var(--gold)}
+.chrome .sub{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;
   text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
-.loginwrap{position:relative;pointer-events:auto}
+.loginwrap{position:absolute;top:24px;right:34px;z-index:30}
 .loginIcon{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
   background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#fff;display:grid;place-items:center;
   box-shadow:0 10px 26px rgba(163,127,53,.35);transition:transform .15s}
 .loginIcon:hover{transform:scale(1.06)}
 .loginIcon svg{width:20px;height:20px}
-.loginPanel{position:absolute;top:56px;right:0;width:300px;display:none;
-  background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(14px);
+.loginPanel{position:absolute;top:56px;right:0;width:300px;display:none;text-align:left;
+  background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(14px);
   border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 30px 70px rgba(27,24,18,.18)}
 .loginPanel.open{display:block}
 .loginPanel h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin-bottom:2px}
@@ -52,23 +42,30 @@ body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-
 .loginPanel input{width:100%;font-size:14px;color:var(--ink);background:var(--paper);
   border:1px solid var(--line);border-radius:8px;padding:10px 11px;outline:none;font-family:var(--font-body)}
 .loginPanel input:focus{border-color:var(--gold)}
-.loginPanel button{width:100%;margin-top:14px;font-family:var(--font-body);font-weight:600;font-size:13.5px;
-  color:#fff;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:none;border-radius:9px;
-  padding:11px;cursor:pointer}
+.loginPanel button{width:100%;margin-top:14px;font-weight:600;font-size:13.5px;color:#fff;
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:none;border-radius:9px;
+  padding:11px;cursor:pointer;font-family:var(--font-body)}
 .loginPanel .foot{margin-top:10px;font-size:11px;color:var(--ink-soft);text-align:center}
 
-/* centered top copy */
-.hero{position:absolute;top:9vh;left:50%;transform:translateX(-50%);z-index:15;text-align:center;
-  width:min(760px,92vw);pointer-events:none}
+.hero{max-width:780px;margin:52px auto 0}
 .kick{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;
   text-transform:uppercase;color:var(--gold-deep);margin-bottom:12px}
-h1{font-family:var(--font-display);font-weight:600;font-size:clamp(36px,4.6vw,56px);line-height:1.04;letter-spacing:-.02em}
+h1{font-family:var(--font-display);font-weight:600;font-size:clamp(38px,4.8vw,60px);line-height:1.04;letter-spacing:-.02em}
 h1 em{font-style:italic;font-weight:500;color:var(--gold)}
-.lede{margin:14px auto 0;font-size:15px;color:#4c463a;max-width:520px;
-  text-shadow:0 1px 8px rgba(250,247,242,.9)}
-.scrollHint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:15;
+.lede{margin:14px auto 0;font-size:15.5px;color:#4c463a;max-width:540px}
+
+/* ================= cloud band: the ring lives HERE, clipped ================= */
+.cloudband{position:relative;height:62vh;min-height:420px;overflow:hidden;z-index:1;
+  background:radial-gradient(130% 130% at 50% 30%,var(--paper) 0%,#f4efe5 60%,#ece5d6 100%)}
+#scene{position:absolute;inset:0;perspective:1600px;perspective-origin:50% 42%;cursor:grab}
+#scene.dragging{cursor:grabbing}
+#world{position:absolute;left:50%;top:47%;transform-style:preserve-3d}
+.ph{position:absolute;left:0;top:0;width:var(--cw);border-radius:11px;
+  box-shadow:0 24px 60px rgba(27,24,18,.25);will-change:transform,opacity;
+  -webkit-user-drag:none;user-select:none;cursor:pointer;background:var(--paper-2)}
+.scrollHint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:15;
   font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
-  color:var(--ink-soft);animation:bob 2.4s ease-in-out infinite}
+  color:var(--ink-soft);animation:bob 2.4s ease-in-out infinite;pointer-events:none}
 @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,7px)}}
 
 /* ================= below the fold ================= */
@@ -88,11 +85,29 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
   font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
 .steps b{color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
 .steps span{color:var(--gold)}
-.ctaRow{margin-top:34px;text-align:center}
-.cta{display:inline-block;font-family:var(--font-body);font-weight:600;font-size:15px;color:#fff;text-decoration:none;
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:12px;padding:15px 44px;
+.cta{display:inline-block;font-weight:600;font-size:15px;color:#fff;text-decoration:none;font-family:var(--font-body);
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:12px;padding:14px 38px;
   box-shadow:0 16px 40px rgba(163,127,53,.35)}
 .cta:hover{filter:brightness(1.05)}
+.heroCta{margin-top:22px;display:flex;gap:16px;align-items:center;justify-content:center}
+.heroCta .from{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft)}
+.price{font-family:var(--font-display);font-weight:600;font-size:30px;margin-top:10px;color:var(--ink)}
+.price span{font-size:14px;color:var(--ink-soft);font-family:var(--font-body)}
+.feat.pop{border-color:var(--gold);box-shadow:0 14px 40px rgba(193,154,75,.18)}
+.addons{margin-top:26px;text-align:center;font-family:var(--font-mono);font-size:10px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.sampleCard{margin:64px auto 0;max-width:560px;background:var(--card);border:1px solid var(--gold);
+  border-radius:18px;padding:34px 34px 30px;text-align:center;box-shadow:0 24px 60px rgba(193,154,75,.16)}
+.sampleCard h3{font-family:var(--font-display);font-weight:600;font-size:23px}
+.sampleCard p{margin-top:8px;font-size:13.5px;color:var(--ink-soft)}
+.sampleCard form{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+.sampleCard input{width:100%;font-size:14px;color:var(--ink);background:var(--paper);font-family:var(--font-body);
+  border:1px solid var(--line);border-radius:9px;padding:12px 13px;outline:none;text-align:center}
+.sampleCard input:focus{border-color:var(--gold)}
+.sampleCard button{width:100%;font-weight:600;font-size:14.5px;color:#fff;border:none;cursor:pointer;
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:10px;padding:13px;font-family:var(--font-body)}
+.sampleOk{margin-top:12px;font-size:13px;color:var(--gold-deep);font-weight:600}
 .footer{border-top:1px solid var(--line);padding:26px 34px;font-family:var(--font-mono);
   font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -104,116 +119,130 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
 #lightbox img{max-width:min(88vw,560px);max-height:88vh;border-radius:12px;box-shadow:0 40px 120px rgba(0,0,0,.5)}
 
 @media (max-width:700px){
-  .hero{top:12vh}
-  :root{--cw:130px}
+  .chrome{position:static;text-align:center;margin-bottom:8px}
+  .hero{margin-top:20px}
+  :root{--cw:140px}
+  .cloudband{height:52vh}
   .loginPanel{right:-8px;width:calc(100vw - 40px);max-width:300px}
 }
 </style></head><body>
 
-<div class="stage">
-  <div id="scene"><div id="world"></div></div>
-
-  <div class="topbar">
-    <div class="wordmark">
-      <div class="brand">Muse <em>Studio</em></div>
-      <div class="sub">brand in, scheduled posts out</div>
-    </div>
-    <div class="loginwrap">
-      <button class="loginIcon" id="loginIcon" aria-label="Client login" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
-      </button>
-      <form class="loginPanel" id="loginPanel">
-        <h2>Client login</h2>
-        <div class="hint">Your brand's studio, where you left it.</div>
-        <label for="em">Email</label>
-        <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
-        <label for="pw">Password</label>
-        <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
-        <button type="submit">Enter the studio</button>
-        <div class="foot">Beta access &middot; saved per brand</div>
-      </form>
-    </div>
+<div class="topband">
+  <div class="chrome">
+    <div class="brand">Muse <em>Studio</em></div>
+    <div class="sub">brand in, scheduled posts out</div>
+  </div>
+  <div class="loginwrap">
+    <button class="loginIcon" id="loginIcon" aria-label="Client login" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+    </button>
+    <form class="loginPanel" id="loginPanel">
+      <h2>Client login</h2>
+      <div class="hint">Your brand's studio, where you left it.</div>
+      <label for="em">Email</label>
+      <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+      <button type="submit">Enter the studio</button>
+      <div class="foot">Beta access &middot; saved per brand</div>
+    </form>
   </div>
 
   <div class="hero">
-    <div class="kick">AI content studio for brands</div>
-    <h1>Every brand has a <em>muse.</em></h1>
-    <p class="lede">Point Muse at a website. It learns the brand and turns it into finished, scheduled social content.</p>
+    <div class="kick">Done-for-you social content</div>
+    <h1>Your brand's content, <em>done.</em></h1>
+    <p class="lede">Carousels, stories and ad graphics in your brand's exact look and voice, created from your website alone. Delivered ready to post.</p>
+    <div class="heroCta">
+      <a class="cta" href="#sample">Get a free sample</a>
+      <span class="from">packs from &euro;240</span>
+    </div>
   </div>
+</div>
 
+<div class="cloudband">
+  <div id="scene"><div id="world"></div></div>
   <div class="scrollHint">scroll &darr;</div>
 </div>
 
 <div class="below">
   <div class="wrap">
-    <div class="big">The work brands pay <em>four to five figures</em> for, from one link.</div>
-    <p class="sub2">Muse reads a brand's website - its colors, voice, logo and real products - then writes the ideas, designs the visuals, and schedules everything. No briefs, no templates, no agency wait.</p>
+    <div class="big">Designer-grade content, at <em>pack</em> prices.</div>
+    <p class="sub2">Every pack is built from your website alone: your colors, your voice, your real products, never stock templates. You get finished posts with captions, ready to publish. No briefs, no meetings, no agency retainer.</p>
     <div class="grid">
-      <div class="feat"><div class="n">01</div><h3>Instagram carousels</h3><p>Multi-slide posts with a hook, a story and a shop slide, art-directed to the brand.</p></div>
-      <div class="feat"><div class="n">02</div><h3>Story sets</h3><p>Vertical 1080&times;1920 stories, safe-zone aware, one tap from feed to schedule.</p></div>
-      <div class="feat"><div class="n">03</div><h3>Ad creatives &amp; graphics</h3><p>Product-true renders - the real bottle, the real box, never an invented lookalike.</p></div>
-      <div class="feat"><div class="n">04</div><h3>Captions in the brand's voice</h3><p>Written in the brand's own language, hashtags included, ready to edit inline.</p></div>
-      <div class="feat"><div class="n">05</div><h3>Endless on-brand ideas</h3><p>Fresh concepts on demand, steered by one line of creative direction.</p></div>
-      <div class="feat"><div class="n">06</div><h3>Scheduled everywhere</h3><p>Instagram, TikTok, Facebook, Pinterest and X - queued from the same screen.</p></div>
+      <div class="feat"><div class="n">Pack S</div><div class="price">&euro;240</div><h3>8 feed posts</h3><p>Carousels and single graphics in your brand, captions included.</p></div>
+      <div class="feat pop"><div class="n">Pack M &middot; most popular</div><div class="price">&euro;440</div><h3>16 posts + 8 stories</h3><p>A full month of feed and story content, captions included.</p></div>
+      <div class="feat"><div class="n">Monthly</div><div class="price">&euro;640<span>/mo</span></div><h3>24 posts + 12 stories</h3><p>Delivered weekly, priority requests, fresh ideas every batch.</p></div>
     </div>
-    <div class="steps"><b>Read the brand</b><span>&rarr;</span><b>Ideas</b><span>&rarr;</span><b>Renders</b><span>&rarr;</span><b>Scheduled</b></div>
-    <div class="ctaRow"><a class="cta" href="/studio">Enter the studio</a></div>
+    <p class="addons">Want it posted for you too? Full scheduling to your accounts, +&euro;190/mo &middot; Agencies: white-label Muse Studio from &euro;3,500</p>
+
+    <div class="sampleCard" id="sample">
+      <h3>Get a free sample post for your brand</h3>
+      <p>Leave your email and your website. We create one real post in your brand and send it back. Free, no strings.</p>
+      <form id="sampleForm">
+        <input id="sEmail" type="email" required placeholder="you@brand.com" autocomplete="email">
+        <input id="sSite" type="text" required placeholder="yourbrand.com" autocomplete="url">
+        <button type="submit">Send me my sample</button>
+      </form>
+      <div class="sampleOk" id="sampleOk"></div>
+    </div>
   </div>
-  <div class="footer"><span>Muse Studio</span><span>drag the cloud &middot; click a render to view</span></div>
+  <div class="footer"><span>Muse Studio</span><span>drag the ring &middot; click a render to view</span></div>
 </div>
 
 <div id="lightbox"><img alt=""></div>
 
 <script>
-/* ---------- images: real renders from the library, placeholders until then ---------- */
-const PALETTES=[["#c19a4b","#1b1812"],["#1b1812","#faf7f2"],["#a37f35","#fffdf9"],["#2e2a3f","#d4b06a"],["#7a6f57","#faf7f2"],["#14121a","#c19a4b"]];
-const WORDS=["HOOK","WHY","PROOF","SHOP","LINEUP","MUSE","STORY","BRAND"];
+/* ---------- images: the live render library IS the show; placeholders only if empty ---------- */
 function placeholder(i){
-  const [bg,fg]=PALETTES[i%PALETTES.length],w=WORDS[i%WORDS.length];
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="${bg}"/><text x="60" y="180" font-family="Georgia,serif" font-style="italic" font-size="64" fill="${fg}" opacity=".55">Muse</text><text x="55" y="560" font-family="Georgia,serif" font-weight="700" font-size="118" fill="${fg}">${w}</text><rect x="60" y="880" width="120" height="7" fill="${fg}" opacity=".7"/></svg>`;
+  const P=[["#c19a4b","#1b1812"],["#1b1812","#faf7f2"],["#a37f35","#fffdf9"],["#2e2a3f","#d4b06a"]];
+  const W=["HOOK","WHY","SHOP","MUSE"];
+  const [bg,fg]=P[i%P.length];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="${bg}"/><text x="60" y="180" font-family="Georgia,serif" font-style="italic" font-size="64" fill="${fg}" opacity=".55">Muse</text><text x="55" y="560" font-family="Georgia,serif" font-weight="700" font-size="118" fill="${fg}">${W[i%W.length]}</text><rect x="60" y="880" width="120" height="7" fill="${fg}" opacity=".7"/></svg>`;
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
 async function loadImages(){
   let urls=[];
   try{
     const j=await (await fetch("/api/library")).json();
-    urls=(j.brands||[]).flatMap(b=>b.files.map(f=>"/"+f.path)).slice(0,36);
+    urls=(j.brands||[]).flatMap(b=>b.files.map(f=>"/"+f.path)).slice(0,28);
   }catch(e){}
-  const n=Math.max(urls.length,16);
-  while(urls.length<n)urls.push(placeholder(urls.length));
+  if(!urls.length)urls=Array.from({length:12},(_,i)=>placeholder(i));
+  while(urls.length<12)urls=urls.concat(urls.slice(0,12-urls.length)); /* few renders: repeat to fill the ring */
   return urls;
 }
 
-/* ---------- the cloud: crisp images, orbit drag with inertia, auto-rotate ---------- */
+/* ---------- the ring: a wide two-row carousel, crisp, drag to spin ---------- */
 const world=document.getElementById("world"),scene=document.getElementById("scene");
 const lb=document.getElementById("lightbox"),lbImg=lb.querySelector("img");
 lb.onclick=()=>lb.classList.remove("show");
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){lb.classList.remove("show");panel.classList.remove("open");}});
-let items=[],rotY=0,rotX=-.1,velY=0,velX=0,auto=.0019,dragging=false,moved=false,px=0,py=0,R=0;
+let items=[],rotY=0,tilt=-.1,velY=0,auto=.0016,dragging=false,moved=false,px=0,py=0,R=0;
 
-function radius(){return Math.min(innerWidth,innerHeight)*.5+140}
+function radius(){return Math.max(scene.clientWidth,720)*.34}
 function build(urls){
   R=radius();
-  const N=urls.length,GA=Math.PI*(3-Math.sqrt(5));
+  const N=urls.length;
   items=urls.map((u,i)=>{
     const img=new Image();img.src=u;img.className="ph";img.draggable=false;
     img.onclick=()=>{if(moved)return;lbImg.src=u;lb.classList.add("show");};
     world.appendChild(img);
-    const y=1-(i/(N-1||1))*2,r=Math.sqrt(Math.max(0,1-y*y)),th=GA*i;
-    return {el:img,x:Math.cos(th)*r,y:y*.72,z:Math.sin(th)*r};
+    const th=(i/N)*Math.PI*2;
+    /* two gently offset rows so it reads as a cloud, but stays inside the band */
+    const y=(i%2?1:-1)*.16+((i*7)%5-2)*.02;
+    return {el:img,th,y};
   });
 }
 function frame(){
-  rotY+=auto+velY;rotX+=velX;velY*=.95;velX*=.95;
-  rotX=Math.max(-.8,Math.min(.8,rotX));
-  const cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);
+  rotY+=auto+velY;velY*=.95;
+  const ct=Math.cos(tilt),st=Math.sin(tilt);
   for(const it of items){
-    let x=it.x*cy+it.z*sy, z=-it.x*sy+it.z*cy, y=it.y;
-    let y2=y*cx-z*sx, z2=y*sx+z*cx;
-    const X=x*R*1.12,Y=y2*R,Z=z2*R;
+    const a=it.th+rotY;
+    let x=Math.cos(a),z=Math.sin(a),y=it.y;
+    let y2=y*ct-z*st*.28, z2=z;
+    const X=x*R*1.28,Y=y2*R,Z=z2*R*.9;
     const t=(z2+1)/2; /* 0 back, 1 front */
-    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px) scale(${(.72+t*.4).toFixed(3)})`;
-    it.el.style.opacity=(.55+t*.45).toFixed(3);
+    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px) scale(${(.66+t*.46).toFixed(3)})`;
+    it.el.style.opacity=(.5+t*.5).toFixed(3);
     it.el.style.zIndex=Math.round(t*100);
   }
   requestAnimationFrame(frame);
@@ -223,7 +252,8 @@ addEventListener("pointermove",e=>{
   if(!dragging)return;
   const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;
   if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-  velY=dx*.00028+velY*.5;velX=dy*.00022+velX*.5;
+  velY=dx*.00030+velY*.5;
+  tilt=Math.max(-.3,Math.min(.18,tilt+dy*.0012));
 });
 addEventListener("pointerup",()=>{dragging=false;scene.classList.remove("dragging");setTimeout(()=>moved=false,50);});
 addEventListener("resize",()=>{R=radius();});
@@ -234,6 +264,22 @@ icon.onclick=e=>{e.stopPropagation();panel.classList.toggle("open");if(panel.cla
 panel.onclick=e=>e.stopPropagation();
 document.addEventListener("click",()=>panel.classList.remove("open"));
 panel.addEventListener("submit",e=>{e.preventDefault();window.location.href="/studio";});
+
+/* ---------- free sample request ---------- */
+const sForm=document.getElementById("sampleForm"),sOk=document.getElementById("sampleOk");
+sForm.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const email=document.getElementById("sEmail").value.trim(),website=document.getElementById("sSite").value.trim();
+  sOk.textContent="Sending...";
+  try{
+    const r=await fetch("/api/sample-request",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({email,website})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.error||"try again");
+    sForm.style.display="none";
+    sOk.textContent="Request received. Your sample is on its way to your inbox.";
+  }catch(err){sOk.textContent="Could not send: "+(err.message||err);}
+});
 
 loadImages().then(urls=>{build(urls);frame();});
 </script>

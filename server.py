@@ -126,6 +126,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"brand": s}) if s else self._json(404, {"brand": None})
         if self.path.startswith("/api/library"):
             return self._library()
+        if self.path.startswith("/api/sample-requests"):
+            return self._sample_requests_list()
         if self.path.startswith("/api/subaccounts"):
             return self._subaccounts()
         if self.path.startswith("/api/accounts"):
@@ -146,6 +148,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(502, {"error": "scrape failed: %s" % e})
                 _write_state(brand)
                 return self._json(200, {"brand": brand})
+
+            if self.path.startswith("/api/sample-request"):
+                return self._sample_request(self._body())
 
             if self.path.startswith("/api/store-image"):
                 return self._store_image(self._body())
@@ -388,6 +393,33 @@ class Handler(BaseHTTPRequestHandler):
             pass
         brands.sort(key=lambda b: -b["files"][0]["mtime"])
         return self._json(200, {"brands": brands})
+
+    def _sample_request(self, req):
+        """Landing-page lead capture: email + brand website. Appends to a JSONL file inside
+        the renders dir because that's the volume-backed (deploy-surviving) path on Railway."""
+        email = (req.get("email") or "").strip()[:200]
+        site = (req.get("website") or "").strip()[:300]
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            return self._json(400, {"error": "valid email required"})
+        if not site:
+            return self._json(400, {"error": "brand website required"})
+        base = os.environ.get("RENDER_OUT") or os.path.join(ROOT, "renders")
+        os.makedirs(base, exist_ok=True)
+        import datetime
+        with open(os.path.join(base, "_sample-requests.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": datetime.datetime.now().isoformat(timespec="seconds"),
+                                "email": email, "website": site}) + "\n")
+        return self._json(200, {"ok": True})
+
+    def _sample_requests_list(self):
+        base = os.environ.get("RENDER_OUT") or os.path.join(ROOT, "renders")
+        out = []
+        try:
+            with open(os.path.join(base, "_sample-requests.jsonl"), encoding="utf-8") as f:
+                out = [json.loads(l) for l in f if l.strip()]
+        except FileNotFoundError:
+            pass
+        return self._json(200, {"requests": out[::-1]})
 
     def _store_image(self, req):
         """Download a rendered slide (Fal URL) to disk so it survives URL expiry + reloads.
