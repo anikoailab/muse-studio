@@ -128,7 +128,11 @@ def ideas_prompt(brand, direction, n, nprod=0):
                      'unless that IS the brand language.' % lang)
     else:
         lang_line = ('LANGUAGE: Write EVERYTHING (tone, title, idea, caption, headlines, badges, hashtags) '
-                     'in the SAME language as the Brand voice and taglines shown above. Do NOT translate to English.')
+                     'in the SAME language as the Brand voice and taglines shown above. Do NOT translate to English. '
+                     'NATIVE QUALITY RULE: the copy must read as if a native-speaker copywriter wrote it - natural idioms, '
+                     'correct grammar, cases and suffixes, correct diacritics, never a word-for-word translation of an English '
+                     'phrase. Before returning the JSON, re-read every line in that language and rewrite anything a native '
+                     'speaker would find unnatural or incorrect.')
     if direction.strip():
         dline = 'Creative direction for this whole batch: "%s". EVERY idea must clearly fit this direction.' % direction.strip()
     else:
