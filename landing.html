@@ -12,104 +12,156 @@
   --font-display:"Fraunces",Georgia,serif;
   --font-body:"Inter",-apple-system,system-ui,sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --cw:clamp(150px,16vw,215px);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{background:radial-gradient(120% 120% at 50% 38%,#fffdf9 0%,var(--paper) 55%,#efe9dd 100%);
-  color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;overflow:hidden}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6}
 
-/* ---------- 3D cloud ---------- */
-#scene{position:fixed;inset:0;perspective:1400px;perspective-origin:50% 50%;cursor:grab;z-index:1}
+/* ================= hero (100vh, cloud in the middle) ================= */
+.stage{position:relative;height:100vh;overflow:hidden;
+  background:radial-gradient(120% 120% at 50% 45%,#fffdf9 0%,var(--paper) 55%,#efe9dd 100%)}
+#scene{position:absolute;inset:0;perspective:1500px;perspective-origin:50% 52%;cursor:grab;z-index:1}
 #scene.dragging{cursor:grabbing}
-#world{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
-.ph{position:absolute;left:0;top:0;width:var(--cw,170px);border-radius:10px;
-  box-shadow:0 18px 45px rgba(27,24,18,.18);will-change:transform,opacity,filter;
+#world{position:absolute;left:50%;top:54%;transform-style:preserve-3d}
+.ph{position:absolute;left:0;top:0;width:var(--cw);border-radius:10px;
+  box-shadow:0 22px 55px rgba(27,24,18,.22);will-change:transform,opacity;
   -webkit-user-drag:none;user-select:none;cursor:pointer;background:var(--paper-2)}
 
-/* ---------- overlay content ---------- */
-.veil{position:fixed;inset:0;z-index:2;pointer-events:none;
-  background:linear-gradient(90deg,rgba(250,247,242,.94) 0%,rgba(250,247,242,.78) 30%,rgba(250,247,242,.12) 55%,rgba(250,247,242,.22) 78%,rgba(250,247,242,.6) 100%)}
-.wordmark{position:fixed;top:26px;left:34px;z-index:10;pointer-events:auto}
-.wordmark .brand{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-.02em}
+/* top chrome */
+.topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:flex-start;
+  justify-content:space-between;padding:24px 34px;pointer-events:none}
+.wordmark{pointer-events:auto}
+.wordmark .brand{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.02em}
 .wordmark .brand em{font-style:italic;font-weight:500;color:var(--gold)}
-.wordmark .sub{font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+.wordmark .sub{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
+.loginwrap{position:relative;pointer-events:auto}
+.loginIcon{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#fff;display:grid;place-items:center;
+  box-shadow:0 10px 26px rgba(163,127,53,.35);transition:transform .15s}
+.loginIcon:hover{transform:scale(1.06)}
+.loginIcon svg{width:20px;height:20px}
+.loginPanel{position:absolute;top:56px;right:0;width:300px;display:none;
+  background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 30px 70px rgba(27,24,18,.18)}
+.loginPanel.open{display:block}
+.loginPanel h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin-bottom:2px}
+.loginPanel .hint{font-size:12px;color:var(--ink-soft);margin-bottom:12px}
+.loginPanel label{display:block;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft);margin:10px 0 4px}
+.loginPanel input{width:100%;font-size:14px;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:8px;padding:10px 11px;outline:none;font-family:var(--font-body)}
+.loginPanel input:focus{border-color:var(--gold)}
+.loginPanel button{width:100%;margin-top:14px;font-family:var(--font-body);font-weight:600;font-size:13.5px;
+  color:#fff;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:none;border-radius:9px;
+  padding:11px;cursor:pointer}
+.loginPanel .foot{margin-top:10px;font-size:11px;color:var(--ink-soft);text-align:center}
 
-.hero{position:fixed;z-index:10;left:34px;top:50%;transform:translateY(-50%);max-width:520px;pointer-events:auto}
-.kick{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--gold-deep);margin-bottom:16px}
-h1{font-family:var(--font-display);font-weight:600;font-size:clamp(38px,5vw,58px);line-height:1.06;letter-spacing:-.02em}
+/* centered top copy */
+.hero{position:absolute;top:9vh;left:50%;transform:translateX(-50%);z-index:15;text-align:center;
+  width:min(760px,92vw);pointer-events:none}
+.kick{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--gold-deep);margin-bottom:12px}
+h1{font-family:var(--font-display);font-weight:600;font-size:clamp(36px,4.6vw,56px);line-height:1.04;letter-spacing:-.02em}
 h1 em{font-style:italic;font-weight:500;color:var(--gold)}
-.lede{margin-top:18px;font-size:15.5px;color:#4c463a;max-width:440px}
-.steps{margin-top:26px;display:flex;flex-wrap:wrap;gap:8px 6px;align-items:center;
+.lede{margin:14px auto 0;font-size:15px;color:#4c463a;max-width:520px;
+  text-shadow:0 1px 8px rgba(250,247,242,.9)}
+.scrollHint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:15;
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-soft);animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,7px)}}
+
+/* ================= below the fold ================= */
+.below{position:relative;z-index:5;background:var(--paper);border-top:1px solid var(--line)}
+.wrap{max-width:1020px;margin:0 auto;padding:90px 30px 70px}
+.big{font-family:var(--font-display);font-weight:600;font-size:clamp(26px,3.4vw,40px);line-height:1.15;
+  letter-spacing:-.015em;max-width:720px}
+.big em{font-style:italic;font-weight:500;color:var(--gold)}
+.sub2{margin-top:16px;max-width:640px;font-size:15.5px;color:#4c463a}
+.grid{margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 22px 20px}
+.feat .n{font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--gold-deep);
+  text-transform:uppercase}
+.feat h3{font-family:var(--font-display);font-weight:600;font-size:18px;margin:8px 0 6px}
+.feat p{font-size:13.5px;color:var(--ink-soft)}
+.steps{margin-top:56px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
   font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
-.steps b{color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:700}
+.steps b{color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
 .steps span{color:var(--gold)}
+.ctaRow{margin-top:34px;text-align:center}
+.cta{display:inline-block;font-family:var(--font-body);font-weight:600;font-size:15px;color:#fff;text-decoration:none;
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:12px;padding:15px 44px;
+  box-shadow:0 16px 40px rgba(163,127,53,.35)}
+.cta:hover{filter:brightness(1.05)}
+.footer{border-top:1px solid var(--line);padding:26px 34px;font-family:var(--font-mono);
+  font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 
-/* ---------- login card ---------- */
-.login{position:fixed;z-index:10;right:44px;top:50%;transform:translateY(-50%);width:330px;pointer-events:auto;
-  background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px);
-  border:1px solid var(--line);border-radius:18px;padding:26px 26px 22px;
-  box-shadow:0 30px 70px rgba(27,24,18,.14)}
-.login h2{font-family:var(--font-display);font-weight:600;font-size:20px;margin-bottom:4px}
-.login .hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px}
-.login label{display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-soft);margin:12px 0 5px}
-.login input{width:100%;font-family:var(--font-body);font-size:14px;color:var(--ink);
-  background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:none}
-.login input:focus{border-color:var(--gold)}
-.login button{width:100%;margin-top:18px;font-family:var(--font-body);font-weight:600;font-size:14px;
-  color:#fff;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:none;border-radius:10px;
-  padding:13px;cursor:pointer;letter-spacing:.01em}
-.login button:hover{filter:brightness(1.05)}
-.login .foot{margin-top:14px;font-size:11.5px;color:var(--ink-soft);text-align:center}
-
-.credit{position:fixed;left:34px;bottom:22px;z-index:10;font-family:var(--font-mono);
-  font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
-
-/* ---------- lightbox ---------- */
+/* lightbox */
 #lightbox{position:fixed;inset:0;z-index:60;background:rgba(20,18,14,.86);display:none;
   align-items:center;justify-content:center;cursor:zoom-out}
 #lightbox.show{display:flex}
 #lightbox img{max-width:min(88vw,560px);max-height:88vh;border-radius:12px;box-shadow:0 40px 120px rgba(0,0,0,.5)}
 
-@media (max-width:900px){
-  body{overflow:auto}
-  .veil{background:linear-gradient(180deg,rgba(250,247,242,.92) 0%,rgba(250,247,242,.55) 45%,rgba(250,247,242,.85) 100%)}
-  .hero{position:relative;left:0;top:0;transform:none;margin:110px 26px 0;max-width:none}
-  .login{position:relative;right:0;top:0;transform:none;width:auto;margin:34px 26px 60px}
-  .credit{display:none}
-  :root{--cw:120px}
+@media (max-width:700px){
+  .hero{top:12vh}
+  :root{--cw:130px}
+  .loginPanel{right:-8px;width:calc(100vw - 40px);max-width:300px}
 }
 </style></head><body>
 
-<div id="scene"><div id="world"></div></div>
-<div class="veil"></div>
+<div class="stage">
+  <div id="scene"><div id="world"></div></div>
 
-<div class="wordmark">
-  <div class="brand">Muse <em>Studio</em></div>
-  <div class="sub">brand in, scheduled posts out</div>
+  <div class="topbar">
+    <div class="wordmark">
+      <div class="brand">Muse <em>Studio</em></div>
+      <div class="sub">brand in, scheduled posts out</div>
+    </div>
+    <div class="loginwrap">
+      <button class="loginIcon" id="loginIcon" aria-label="Client login" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+      </button>
+      <form class="loginPanel" id="loginPanel">
+        <h2>Client login</h2>
+        <div class="hint">Your brand's studio, where you left it.</div>
+        <label for="em">Email</label>
+        <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
+        <label for="pw">Password</label>
+        <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+        <button type="submit">Enter the studio</button>
+        <div class="foot">Beta access &middot; saved per brand</div>
+      </form>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="kick">AI content studio for brands</div>
+    <h1>Every brand has a <em>muse.</em></h1>
+    <p class="lede">Point Muse at a website. It learns the brand and turns it into finished, scheduled social content.</p>
+  </div>
+
+  <div class="scrollHint">scroll &darr;</div>
 </div>
 
-<div class="hero">
-  <div class="kick">AI content studio for brands</div>
-  <h1>Every brand<br>has a <em>muse.</em></h1>
-  <p class="lede">Paste a brand's website. Muse reads its colors, voice, logo and real products, writes on-brand post ideas, renders every slide, and schedules them to Instagram, TikTok, Facebook, Pinterest and X.</p>
-  <div class="steps"><b>Read the brand</b><span>&rarr;</span><b>Ideas</b><span>&rarr;</span><b>Renders</b><span>&rarr;</span><b>Scheduled</b></div>
+<div class="below">
+  <div class="wrap">
+    <div class="big">The work brands pay <em>four to five figures</em> for, from one link.</div>
+    <p class="sub2">Muse reads a brand's website - its colors, voice, logo and real products - then writes the ideas, designs the visuals, and schedules everything. No briefs, no templates, no agency wait.</p>
+    <div class="grid">
+      <div class="feat"><div class="n">01</div><h3>Instagram carousels</h3><p>Multi-slide posts with a hook, a story and a shop slide, art-directed to the brand.</p></div>
+      <div class="feat"><div class="n">02</div><h3>Story sets</h3><p>Vertical 1080&times;1920 stories, safe-zone aware, one tap from feed to schedule.</p></div>
+      <div class="feat"><div class="n">03</div><h3>Ad creatives &amp; graphics</h3><p>Product-true renders - the real bottle, the real box, never an invented lookalike.</p></div>
+      <div class="feat"><div class="n">04</div><h3>Captions in the brand's voice</h3><p>Written in the brand's own language, hashtags included, ready to edit inline.</p></div>
+      <div class="feat"><div class="n">05</div><h3>Endless on-brand ideas</h3><p>Fresh concepts on demand, steered by one line of creative direction.</p></div>
+      <div class="feat"><div class="n">06</div><h3>Scheduled everywhere</h3><p>Instagram, TikTok, Facebook, Pinterest and X - queued from the same screen.</p></div>
+    </div>
+    <div class="steps"><b>Read the brand</b><span>&rarr;</span><b>Ideas</b><span>&rarr;</span><b>Renders</b><span>&rarr;</span><b>Scheduled</b></div>
+    <div class="ctaRow"><a class="cta" href="/studio">Enter the studio</a></div>
+  </div>
+  <div class="footer"><span>Muse Studio</span><span>drag the cloud &middot; click a render to view</span></div>
 </div>
 
-<form class="login" id="loginForm">
-  <h2>Client login</h2>
-  <div class="hint">Your brand's studio, ready where you left it.</div>
-  <label for="em">Email</label>
-  <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
-  <label for="pw">Password</label>
-  <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
-  <button type="submit">Enter the studio</button>
-  <div class="foot">Beta access &middot; your work is saved per brand</div>
-</form>
-
-<div class="credit">Muse Studio &middot; renders drift by, drag to orbit</div>
 <div id="lightbox"><img alt=""></div>
 
 <script>
@@ -125,21 +177,21 @@ async function loadImages(){
   let urls=[];
   try{
     const j=await (await fetch("/api/library")).json();
-    urls=(j.brands||[]).flatMap(b=>b.files.map(f=>"/"+f.path)).slice(0,42);
+    urls=(j.brands||[]).flatMap(b=>b.files.map(f=>"/"+f.path)).slice(0,36);
   }catch(e){}
-  const n=Math.max(urls.length,14);
+  const n=Math.max(urls.length,16);
   while(urls.length<n)urls.push(placeholder(urls.length));
   return urls;
 }
 
-/* ---------- the cloud: sphere, orbit drag with inertia, auto-rotate, depth fade ---------- */
+/* ---------- the cloud: crisp images, orbit drag with inertia, auto-rotate ---------- */
 const world=document.getElementById("world"),scene=document.getElementById("scene");
 const lb=document.getElementById("lightbox"),lbImg=lb.querySelector("img");
 lb.onclick=()=>lb.classList.remove("show");
-document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("show");});
-let items=[],rotY=0,rotX=-.12,velY=0,velX=0,auto=.0022,dragging=false,moved=false,px=0,py=0,R=0;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){lb.classList.remove("show");panel.classList.remove("open");}});
+let items=[],rotY=0,rotX=-.1,velY=0,velX=0,auto=.0019,dragging=false,moved=false,px=0,py=0,R=0;
 
-function radius(){return Math.min(innerWidth,innerHeight)*.52+120}
+function radius(){return Math.min(innerWidth,innerHeight)*.5+140}
 function build(urls){
   R=radius();
   const N=urls.length,GA=Math.PI*(3-Math.sqrt(5));
@@ -148,21 +200,20 @@ function build(urls){
     img.onclick=()=>{if(moved)return;lbImg.src=u;lb.classList.add("show");};
     world.appendChild(img);
     const y=1-(i/(N-1||1))*2,r=Math.sqrt(Math.max(0,1-y*y)),th=GA*i;
-    return {el:img,x:Math.cos(th)*r,y:y*.86,z:Math.sin(th)*r};
+    return {el:img,x:Math.cos(th)*r,y:y*.72,z:Math.sin(th)*r};
   });
 }
 function frame(){
   rotY+=auto+velY;rotX+=velX;velY*=.95;velX*=.95;
-  rotX=Math.max(-.9,Math.min(.9,rotX));
+  rotX=Math.max(-.8,Math.min(.8,rotX));
   const cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);
   for(const it of items){
     let x=it.x*cy+it.z*sy, z=-it.x*sy+it.z*cy, y=it.y;
     let y2=y*cx-z*sx, z2=y*sx+z*cx;
-    const X=x*R,Y=y2*R,Z=z2*R;
+    const X=x*R*1.12,Y=y2*R,Z=z2*R;
     const t=(z2+1)/2; /* 0 back, 1 front */
-    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px)`;
-    it.el.style.opacity=(.25+t*.75).toFixed(3);
-    it.el.style.filter=`blur(${((1-t)*2.2).toFixed(2)}px)`;
+    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px) scale(${(.72+t*.4).toFixed(3)})`;
+    it.el.style.opacity=(.55+t*.45).toFixed(3);
     it.el.style.zIndex=Math.round(t*100);
   }
   requestAnimationFrame(frame);
@@ -177,9 +228,12 @@ addEventListener("pointermove",e=>{
 addEventListener("pointerup",()=>{dragging=false;scene.classList.remove("dragging");setTimeout(()=>moved=false,50);});
 addEventListener("resize",()=>{R=radius();});
 
-document.getElementById("loginForm").addEventListener("submit",e=>{
-  e.preventDefault();window.location.href="/studio";
-});
+/* ---------- login popover ---------- */
+const icon=document.getElementById("loginIcon"),panel=document.getElementById("loginPanel");
+icon.onclick=e=>{e.stopPropagation();panel.classList.toggle("open");if(panel.classList.contains("open"))document.getElementById("em").focus();};
+panel.onclick=e=>e.stopPropagation();
+document.addEventListener("click",()=>panel.classList.remove("open"));
+panel.addEventListener("submit",e=>{e.preventDefault();window.location.href="/studio";});
 
 loadImages().then(urls=>{build(urls);frame();});
 </script>
