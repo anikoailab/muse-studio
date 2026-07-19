@@ -1,0 +1,186 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muse Studio - every brand has a muse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#faf7f2;--paper-2:#f2ede4;--card:#ffffff;--line:#e7e0d4;
+  --ink:#1b1812;--ink-soft:#8a8272;
+  --gold:#c19a4b;--gold-deep:#a37f35;
+  --font-display:"Fraunces",Georgia,serif;
+  --font-body:"Inter",-apple-system,system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:radial-gradient(120% 120% at 50% 38%,#fffdf9 0%,var(--paper) 55%,#efe9dd 100%);
+  color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;overflow:hidden}
+
+/* ---------- 3D cloud ---------- */
+#scene{position:fixed;inset:0;perspective:1400px;perspective-origin:50% 50%;cursor:grab;z-index:1}
+#scene.dragging{cursor:grabbing}
+#world{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
+.ph{position:absolute;left:0;top:0;width:var(--cw,170px);border-radius:10px;
+  box-shadow:0 18px 45px rgba(27,24,18,.18);will-change:transform,opacity,filter;
+  -webkit-user-drag:none;user-select:none;cursor:pointer;background:var(--paper-2)}
+
+/* ---------- overlay content ---------- */
+.veil{position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,rgba(250,247,242,.94) 0%,rgba(250,247,242,.78) 30%,rgba(250,247,242,.12) 55%,rgba(250,247,242,.22) 78%,rgba(250,247,242,.6) 100%)}
+.wordmark{position:fixed;top:26px;left:34px;z-index:10;pointer-events:auto}
+.wordmark .brand{font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-.02em}
+.wordmark .brand em{font-style:italic;font-weight:500;color:var(--gold)}
+.wordmark .sub{font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+
+.hero{position:fixed;z-index:10;left:34px;top:50%;transform:translateY(-50%);max-width:520px;pointer-events:auto}
+.kick{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold-deep);margin-bottom:16px}
+h1{font-family:var(--font-display);font-weight:600;font-size:clamp(38px,5vw,58px);line-height:1.06;letter-spacing:-.02em}
+h1 em{font-style:italic;font-weight:500;color:var(--gold)}
+.lede{margin-top:18px;font-size:15.5px;color:#4c463a;max-width:440px}
+.steps{margin-top:26px;display:flex;flex-wrap:wrap;gap:8px 6px;align-items:center;
+  font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+.steps b{color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:700}
+.steps span{color:var(--gold)}
+
+/* ---------- login card ---------- */
+.login{position:fixed;z-index:10;right:44px;top:50%;transform:translateY(-50%);width:330px;pointer-events:auto;
+  background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-radius:18px;padding:26px 26px 22px;
+  box-shadow:0 30px 70px rgba(27,24,18,.14)}
+.login h2{font-family:var(--font-display);font-weight:600;font-size:20px;margin-bottom:4px}
+.login .hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px}
+.login label{display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft);margin:12px 0 5px}
+.login input{width:100%;font-family:var(--font-body);font-size:14px;color:var(--ink);
+  background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:none}
+.login input:focus{border-color:var(--gold)}
+.login button{width:100%;margin-top:18px;font-family:var(--font-body);font-weight:600;font-size:14px;
+  color:#fff;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:none;border-radius:10px;
+  padding:13px;cursor:pointer;letter-spacing:.01em}
+.login button:hover{filter:brightness(1.05)}
+.login .foot{margin-top:14px;font-size:11.5px;color:var(--ink-soft);text-align:center}
+
+.credit{position:fixed;left:34px;bottom:22px;z-index:10;font-family:var(--font-mono);
+  font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* ---------- lightbox ---------- */
+#lightbox{position:fixed;inset:0;z-index:60;background:rgba(20,18,14,.86);display:none;
+  align-items:center;justify-content:center;cursor:zoom-out}
+#lightbox.show{display:flex}
+#lightbox img{max-width:min(88vw,560px);max-height:88vh;border-radius:12px;box-shadow:0 40px 120px rgba(0,0,0,.5)}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .veil{background:linear-gradient(180deg,rgba(250,247,242,.92) 0%,rgba(250,247,242,.55) 45%,rgba(250,247,242,.85) 100%)}
+  .hero{position:relative;left:0;top:0;transform:none;margin:110px 26px 0;max-width:none}
+  .login{position:relative;right:0;top:0;transform:none;width:auto;margin:34px 26px 60px}
+  .credit{display:none}
+  :root{--cw:120px}
+}
+</style></head><body>
+
+<div id="scene"><div id="world"></div></div>
+<div class="veil"></div>
+
+<div class="wordmark">
+  <div class="brand">Muse <em>Studio</em></div>
+  <div class="sub">brand in, scheduled posts out</div>
+</div>
+
+<div class="hero">
+  <div class="kick">AI content studio for brands</div>
+  <h1>Every brand<br>has a <em>muse.</em></h1>
+  <p class="lede">Paste a brand's website. Muse reads its colors, voice, logo and real products, writes on-brand post ideas, renders every slide, and schedules them to Instagram, TikTok, Facebook, Pinterest and X.</p>
+  <div class="steps"><b>Read the brand</b><span>&rarr;</span><b>Ideas</b><span>&rarr;</span><b>Renders</b><span>&rarr;</span><b>Scheduled</b></div>
+</div>
+
+<form class="login" id="loginForm">
+  <h2>Client login</h2>
+  <div class="hint">Your brand's studio, ready where you left it.</div>
+  <label for="em">Email</label>
+  <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
+  <label for="pw">Password</label>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+  <button type="submit">Enter the studio</button>
+  <div class="foot">Beta access &middot; your work is saved per brand</div>
+</form>
+
+<div class="credit">Muse Studio &middot; renders drift by, drag to orbit</div>
+<div id="lightbox"><img alt=""></div>
+
+<script>
+/* ---------- images: real renders from the library, placeholders until then ---------- */
+const PALETTES=[["#c19a4b","#1b1812"],["#1b1812","#faf7f2"],["#a37f35","#fffdf9"],["#2e2a3f","#d4b06a"],["#7a6f57","#faf7f2"],["#14121a","#c19a4b"]];
+const WORDS=["HOOK","WHY","PROOF","SHOP","LINEUP","MUSE","STORY","BRAND"];
+function placeholder(i){
+  const [bg,fg]=PALETTES[i%PALETTES.length],w=WORDS[i%WORDS.length];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="${bg}"/><text x="60" y="180" font-family="Georgia,serif" font-style="italic" font-size="64" fill="${fg}" opacity=".55">Muse</text><text x="55" y="560" font-family="Georgia,serif" font-weight="700" font-size="118" fill="${fg}">${w}</text><rect x="60" y="880" width="120" height="7" fill="${fg}" opacity=".7"/></svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+async function loadImages(){
+  let urls=[];
+  try{
+    const j=await (await fetch("/api/library")).json();
+    urls=(j.brands||[]).flatMap(b=>b.files.map(f=>"/"+f.path)).slice(0,42);
+  }catch(e){}
+  const n=Math.max(urls.length,14);
+  while(urls.length<n)urls.push(placeholder(urls.length));
+  return urls;
+}
+
+/* ---------- the cloud: sphere, orbit drag with inertia, auto-rotate, depth fade ---------- */
+const world=document.getElementById("world"),scene=document.getElementById("scene");
+const lb=document.getElementById("lightbox"),lbImg=lb.querySelector("img");
+lb.onclick=()=>lb.classList.remove("show");
+document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("show");});
+let items=[],rotY=0,rotX=-.12,velY=0,velX=0,auto=.0022,dragging=false,moved=false,px=0,py=0,R=0;
+
+function radius(){return Math.min(innerWidth,innerHeight)*.52+120}
+function build(urls){
+  R=radius();
+  const N=urls.length,GA=Math.PI*(3-Math.sqrt(5));
+  items=urls.map((u,i)=>{
+    const img=new Image();img.src=u;img.className="ph";img.draggable=false;
+    img.onclick=()=>{if(moved)return;lbImg.src=u;lb.classList.add("show");};
+    world.appendChild(img);
+    const y=1-(i/(N-1||1))*2,r=Math.sqrt(Math.max(0,1-y*y)),th=GA*i;
+    return {el:img,x:Math.cos(th)*r,y:y*.86,z:Math.sin(th)*r};
+  });
+}
+function frame(){
+  rotY+=auto+velY;rotX+=velX;velY*=.95;velX*=.95;
+  rotX=Math.max(-.9,Math.min(.9,rotX));
+  const cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);
+  for(const it of items){
+    let x=it.x*cy+it.z*sy, z=-it.x*sy+it.z*cy, y=it.y;
+    let y2=y*cx-z*sx, z2=y*sx+z*cx;
+    const X=x*R,Y=y2*R,Z=z2*R;
+    const t=(z2+1)/2; /* 0 back, 1 front */
+    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px)`;
+    it.el.style.opacity=(.25+t*.75).toFixed(3);
+    it.el.style.filter=`blur(${((1-t)*2.2).toFixed(2)}px)`;
+    it.el.style.zIndex=Math.round(t*100);
+  }
+  requestAnimationFrame(frame);
+}
+scene.addEventListener("pointerdown",e=>{dragging=true;moved=false;px=e.clientX;py=e.clientY;scene.classList.add("dragging");});
+addEventListener("pointermove",e=>{
+  if(!dragging)return;
+  const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;
+  if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
+  velY=dx*.00028+velY*.5;velX=dy*.00022+velX*.5;
+});
+addEventListener("pointerup",()=>{dragging=false;scene.classList.remove("dragging");setTimeout(()=>moved=false,50);});
+addEventListener("resize",()=>{R=radius();});
+
+document.getElementById("loginForm").addEventListener("submit",e=>{
+  e.preventDefault();window.location.href="/studio";
+});
+
+loadImages().then(urls=>{build(urls);frame();});
+</script>
+</body></html>

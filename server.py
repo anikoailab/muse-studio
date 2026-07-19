@@ -58,7 +58,12 @@ class Handler(BaseHTTPRequestHandler):
     _SERVABLE = (".html", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico", ".css", ".js")
 
     def _file(self, path):
-        rel = path.split("?", 1)[0].lstrip("/") or "index.html"
+        rel = path.split("?", 1)[0].lstrip("/")
+        # landing page fronts the app: / -> landing.html, /studio -> the studio itself
+        if rel == "":
+            rel = "landing.html" if os.path.isfile(os.path.join(ROOT, "landing.html")) else "index.html"
+        elif rel in ("studio", "studio/"):
+            rel = "index.html"
         full = os.path.normpath(os.path.join(ROOT, rel))
         base = os.path.basename(full).lower()
         if (not full.startswith(ROOT + os.sep) or not os.path.isfile(full)
