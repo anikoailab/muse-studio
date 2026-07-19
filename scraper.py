@@ -533,15 +533,28 @@ def _images(html, origin):
 
 def _shopify_products(origin):
     try:
-        data = json.loads(_fetch(origin.rstrip("/") + "/products.json?limit=12", timeout=25))
+        data = json.loads(_fetch(origin.rstrip("/") + "/products.json?limit=100", timeout=25))
     except Exception:
         return []
-    out = []
-    for p in data.get("products", [])[:8]:
-        imgs = p.get("images") or []
-        if imgs and imgs[0].get("src"):
-            out.append({"name": (p.get("title") or "").strip()[:40], "url": imgs[0]["src"]})
-    return out
+    prods = [p for p in data.get("products", []) if (p.get("images") or [{}])[0].get("src")]
+    if not prods:
+        return []
+    # products.json is newest-first, so a naive top-N shows whatever the store added LAST -
+    # e.g. an apparel drop on a supplements brand. Group by product_type and round-robin
+    # starting from the LARGEST types (the core catalogue), so the sample represents what
+    # the brand actually sells, not its latest launch.
+    groups = {}
+    for p in prods:
+        groups.setdefault((p.get("product_type") or "").strip().lower(), []).append(p)
+    ordered = sorted(groups.values(), key=len, reverse=True)
+    picked, i = [], 0
+    while len(picked) < 8 and any(len(g) > i for g in ordered):
+        for g in ordered:
+            if i < len(g) and len(picked) < 8:
+                picked.append(g[i])
+        i += 1
+    return [{"name": (p.get("title") or "").strip()[:40], "url": p["images"][0]["src"]}
+            for p in picked]
 
 
 def _linked_css(html, origin):
@@ -618,6 +631,9 @@ def scrape_static(url, _html=None):
         products = _shop_products(html, origin, name)
     if not products:
         products = _html_products(html, name, origin)
+    # UI chrome sneaks into shop grids as if it were a product (register/login banners etc.)
+    _junk = re.compile(r"register|login|sign[-_]?up|banner|payment|shipping|gift[-_]?card|placeholder|shop_small", re.I)
+    products = [p for p in products if not _junk.search((p.get("url") if isinstance(p, dict) else p) or "")]
     # colors/fonts often live ONLY in linked stylesheets - parse HTML + external CSS together
     css = _linked_css(html, origin)
     html_css = html + "\n" + css
