@@ -98,17 +98,35 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
 .addons{margin-top:26px;text-align:center;font-family:var(--font-mono);font-size:10px;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
 .addons a{color:var(--gold-deep);text-decoration:underline}
-.sampleCard{margin:64px auto 0;max-width:560px;background:var(--card);border:1px solid var(--gold);
-  border-radius:18px;padding:34px 34px 30px;text-align:center;box-shadow:0 24px 60px rgba(193,154,75,.16)}
-.sampleCard h3{font-family:var(--font-display);font-weight:600;font-size:23px}
-.sampleCard p{margin-top:8px;font-size:13.5px;color:var(--ink-soft)}
-.sampleCard form{margin-top:20px;display:flex;flex-direction:column;gap:10px}
-.sampleCard input{width:100%;font-size:14px;color:var(--ink);background:var(--paper);font-family:var(--font-body);
-  border:1px solid var(--line);border-radius:9px;padding:12px 13px;outline:none;text-align:center}
-.sampleCard input:focus{border-color:var(--gold)}
-.sampleCard button{width:100%;font-weight:600;font-size:14.5px;color:#fff;border:none;cursor:pointer;
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:10px;padding:13px;font-family:var(--font-body)}
-.sampleOk{margin-top:12px;font-size:13px;color:var(--gold-deep);font-weight:600}
+.sampleCard{position:relative;margin:64px auto 0;max-width:520px;text-align:center;overflow:hidden;
+  background:linear-gradient(180deg,var(--card) 0%,#fdfaf4 100%);
+  border:1px solid var(--line);border-radius:22px;padding:44px 40px 34px;
+  box-shadow:0 30px 70px rgba(163,127,53,.14),0 2px 0 rgba(255,255,255,.6) inset}
+.sampleGlow{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:420px;height:240px;
+  background:radial-gradient(closest-side,rgba(193,154,75,.28),transparent 72%);pointer-events:none;z-index:0}
+.sampleBadge{position:relative;z-index:1;width:52px;height:52px;margin:0 auto 18px;border-radius:50%;
+  display:grid;place-items:center;color:#fff;
+  background:linear-gradient(150deg,var(--gold),var(--gold-deep));
+  box-shadow:0 12px 26px rgba(163,127,53,.4)}
+.sampleBadge svg{width:24px;height:24px}
+.sampleCard h3{position:relative;z-index:1;font-family:var(--font-display);font-weight:600;font-size:25px;letter-spacing:-.01em}
+.sampleCard p{position:relative;z-index:1;margin:10px auto 0;font-size:13.5px;color:var(--ink-soft);max-width:380px;line-height:1.55}
+.sampleCard form{position:relative;z-index:1;margin-top:26px;display:flex;flex-direction:column;gap:14px;text-align:left}
+.sampleCard .field label{display:block;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;padding-left:2px}
+.sampleCard input{width:100%;font-size:14.5px;color:var(--ink);background:var(--paper);font-family:var(--font-body);
+  border:1px solid var(--line);border-radius:10px;padding:13px 15px;outline:none;transition:border-color .15s,box-shadow .15s}
+.sampleCard input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(193,154,75,.14)}
+.sampleCard button{margin-top:4px;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
+  font-weight:600;font-size:14.5px;color:#fff;border:none;cursor:pointer;
+  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:11px;padding:14px;
+  font-family:var(--font-body);box-shadow:0 14px 30px rgba(163,127,53,.32);transition:transform .15s,filter .15s}
+.sampleCard button:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.sampleCard button svg{width:16px;height:16px;transition:transform .15s}
+.sampleCard button:hover svg{transform:translateX(3px)}
+.sampleOk{position:relative;z-index:1;margin-top:14px;font-size:13.5px;color:var(--gold-deep);font-weight:600}
+.sampleFoot{position:relative;z-index:1;margin-top:18px;font-family:var(--font-mono);font-size:9px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);opacity:.75}
 .footer{border-top:1px solid var(--line);padding:26px 34px;font-family:var(--font-mono);
   font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -177,14 +195,27 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
     <p class="addons">Want it posted for you too, or your own white-labeled studio? <a href="mailto:anikoailab@gmail.com?subject=Muse%20Studio%20-%20posting%20%2F%20white-label">Get in touch</a></p>
 
     <div class="sampleCard" id="sample">
+      <div class="sampleGlow"></div>
+      <div class="sampleBadge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.2 5.6 6 .5-4.6 3.9 1.5 5.9L12 15.6l-5.1 3.1 1.5-5.9-4.6-3.9 6-.5z"/></svg>
+      </div>
       <h3>Get a free sample post for your brand</h3>
-      <p>Leave your email and your website. We create one real post in your brand and send it back. Free, no strings.</p>
+      <p>Leave your email and your website. We'll create one real post in your brand's own look and send it back &mdash; free, no strings.</p>
       <form id="sampleForm">
-        <input id="sEmail" type="email" required placeholder="you@brand.com" autocomplete="email">
-        <input id="sSite" type="text" required placeholder="yourbrand.com" autocomplete="url">
-        <button type="submit">Send me my sample</button>
+        <div class="field">
+          <label for="sEmail">Email</label>
+          <input id="sEmail" type="email" required placeholder="you@brand.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="sSite">Website</label>
+          <input id="sSite" type="text" required placeholder="yourbrand.com" autocomplete="url">
+        </div>
+        <button type="submit"><span>Send me my sample</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
       </form>
       <div class="sampleOk" id="sampleOk"></div>
+      <div class="sampleFoot">No card, no calls &middot; usually back within a couple of days</div>
     </div>
   </div>
   <div class="footer"><span>Muse Studio</span><span>drag the ring &middot; click a render to view</span></div>
