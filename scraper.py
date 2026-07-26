@@ -159,19 +159,21 @@ def _fetch_any(url, timeout=30):
             html = _fetch(url, timeout, ua=ua)
             if not _looks_blocked(html):
                 return html, "html"
-        except Exception:
-            pass
+            print("[fetch_any] plain fetch (ua=%s) blocked" % ua[:20], flush=True)
+        except Exception as e:
+            print("[fetch_any] plain fetch (ua=%s) failed: %r" % (ua[:20], e), flush=True)
     try:
         return _fetch_browser(url), "html"  # raises on empty or blocked
-    except Exception:
-        pass
+    except Exception as e:
+        print("[fetch_any] browser rung failed: %r" % e, flush=True)
     try:
         return _fetch_jina_html(url), "html"  # full rendered page - images, colors, everything
-    except Exception:
-        pass
+    except Exception as e:
+        print("[fetch_any] jina html rung failed: %r" % e, flush=True)
     try:
         txt = _fetch_jina(url)
-    except Exception:
+    except Exception as e:
+        print("[fetch_any] jina text rung failed: %r" % e, flush=True)
         txt = ""
     if txt and not _looks_blocked(txt):
         return txt, "text"
