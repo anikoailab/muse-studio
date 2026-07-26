@@ -144,7 +144,7 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
   .cloudband{height:52vh}
   .loginPanel{right:-8px;width:calc(100vw - 40px);max-width:300px}
 }
-</style></head><body>
+</style><script src="/landing-images/manifest.js"></script></head><body>
 
 <div class="topband">
   <div class="chrome">
@@ -233,11 +233,9 @@ function placeholder(i){
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
 async function loadImages(){
-  let urls=[];
-  try{
-    const j=await (await fetch("/api/library")).json();
-    urls=(j.brands||[]).flatMap(b=>b.files.map(f=>"/"+f.path)).slice(0,28);
-  }catch(e){}
+  // Curated set, not the live render library - so the showcase stays exactly what
+  // was hand-picked, unaffected by whatever gets rendered next in the studio.
+  let urls=(window.LANDING_IMAGES||[]).map(p=>"/"+p);
   if(!urls.length)urls=Array.from({length:12},(_,i)=>placeholder(i));
   while(urls.length<12)urls=urls.concat(urls.slice(0,12-urls.length)); /* few renders: repeat to fill the ring */
   return urls;
