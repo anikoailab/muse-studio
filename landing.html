@@ -1,252 +1,325 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Muse Studio - every brand has a muse</title>
+<title>Muse Studio - your website, turned into posts</title>
+<meta name="description" content="Done-for-you social content. Send your website, get finished posts in your own colors with your own products, captions included.">
+<meta property="og:title" content="Muse Studio - your website, turned into posts">
+<meta property="og:description" content="Send your website, get finished posts in your own colors with your own products, captions included.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/landing-images/selected/post2_slide2_lineup-2.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
 <style>
+/* ================= tokens =================
+   One accent (cobalt), one neutral family (cool, deliberately NOT the warm
+   cream/brass palette this page used to wear), one radius scale. The renders
+   in the cloud carry all the colour; the brand stays out of their way. */
 :root{
-  --paper:#faf7f2;--paper-2:#f2ede4;--card:#ffffff;--line:#e7e0d4;
-  --ink:#1b1812;--ink-soft:#8a8272;
-  --gold:#c19a4b;--gold-deep:#a37f35;
-  --font-display:"Fraunces",Georgia,serif;
-  --font-body:"Inter",-apple-system,system-ui,sans-serif;
-  --font-mono:"JetBrains Mono",ui-monospace,monospace;
-  --cw:clamp(170px,17vw,245px);
+  --bg:#f3f3f1; --surface:#ffffff; --surface-2:#ececea;
+  --ink:#101014; --muted:#5e5f68; --line:#dededa;
+  --accent:#2b3fff; --accent-ink:#ffffff; --accent-text:#2b3fff; --accent-soft:rgba(43,63,255,.07);
+  --shadow:0 16px 40px rgba(16,16,20,.10);
+  --shadow-lift:0 26px 60px rgba(16,16,20,.16);
+  --r:18px; --r-sm:12px;             /* cards 18, inputs 12, buttons pill */
+  --font-display:"Bricolage Grotesque",-apple-system,system-ui,sans-serif;
+  --font-body:"Instrument Sans",-apple-system,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0c0c0f; --surface:#15151b; --surface-2:#1c1c23;
+    --ink:#f2f2f0; --muted:#9c9caa; --line:#26262e;
+    --accent:#4b5cff; --accent-ink:#ffffff; --accent-text:#96a2ff; --accent-soft:rgba(75,92,255,.14);
+    --shadow:0 16px 40px rgba(0,0,0,.5);
+    --shadow-lift:0 26px 60px rgba(0,0,0,.62);
+  }
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.shell{max-width:1180px;margin:0 auto;padding:0 28px}
 
-/* ================= top band: text only, nothing overlaps it ================= */
-.topband{position:relative;z-index:20;text-align:center;padding:34px 24px 10px;
-  background:linear-gradient(180deg,#fffdf9 0%,var(--paper) 100%)}
-.chrome{position:absolute;top:24px;left:34px;text-align:left}
-.chrome .brand{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.02em}
-.chrome .brand em{font-style:italic;font-weight:500;color:var(--gold)}
-.chrome .sub{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
-.loginwrap{position:absolute;top:24px;right:34px;z-index:30}
-.loginIcon{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));color:#fff;display:grid;place-items:center;
-  box-shadow:0 10px 26px rgba(163,127,53,.35);transition:transform .15s}
-.loginIcon:hover{transform:scale(1.06)}
-.loginIcon svg{width:20px;height:20px}
-.loginPanel{position:absolute;top:56px;right:0;width:300px;display:none;text-align:left;
-  background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(14px);
-  border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 30px 70px rgba(27,24,18,.18)}
+/* ================= motion (all of it collapses under reduced-motion) ========= */
+@keyframes rise{to{opacity:1;transform:none}}
+.rise{opacity:0;transform:translateY(18px);animation:rise .85s cubic-bezier(.16,1,.3,1) forwards}
+/* Progressive enhancement: the hidden state is applied ONLY once JS has confirmed it
+   can reveal it again. Without this guard a failed script or a browser without
+   IntersectionObserver would leave every section below the fold at opacity 0. */
+.js-rv .rv{opacity:0;transform:translateY(22px);
+  transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+.js-rv .rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .rise,.rv{opacity:1!important;transform:none!important;animation:none!important;transition:none!important}
+}
+
+/* ================= nav ================= */
+.nav{position:relative;z-index:40;height:70px;display:flex;align-items:center;justify-content:space-between}
+.wordmark{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.035em;color:var(--ink)}
+.wordmark b{color:var(--accent-text);font-weight:800}
+.loginwrap{position:relative}
+.loginIcon{font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--ink);
+  background:transparent;border:1px solid var(--line);border-radius:999px;padding:9px 18px;cursor:pointer;
+  transition:border-color .18s,background .18s,transform .12s}
+.loginIcon:hover{border-color:var(--accent);background:var(--accent-soft)}
+.loginIcon:active{transform:scale(.98)}
+.loginPanel{position:absolute;top:52px;right:0;width:302px;display:none;text-align:left;z-index:50;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow-lift)}
 .loginPanel.open{display:block}
-.loginPanel h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin-bottom:2px}
-.loginPanel .hint{font-size:12px;color:var(--ink-soft);margin-bottom:12px}
-.loginPanel label{display:block;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-soft);margin:10px 0 4px}
-.loginPanel input{width:100%;font-size:14px;color:var(--ink);background:var(--paper);
-  border:1px solid var(--line);border-radius:8px;padding:10px 11px;outline:none;font-family:var(--font-body)}
-.loginPanel input:focus{border-color:var(--gold)}
-.loginPanel button{width:100%;margin-top:14px;font-weight:600;font-size:13.5px;color:#fff;
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border:none;border-radius:9px;
-  padding:11px;cursor:pointer;font-family:var(--font-body)}
-.loginPanel .foot{margin-top:10px;font-size:11px;color:var(--ink-soft);text-align:center}
+.loginPanel h2{font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:-.02em}
+.loginPanel .hint{font-size:13px;color:var(--muted);margin:2px 0 14px}
+.loginPanel label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:12px 0 5px}
+.loginPanel input{width:100%;font-size:14.5px;font-family:var(--font-body);color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 13px;outline:none;transition:border-color .15s,box-shadow .15s}
+.loginPanel input::placeholder{color:var(--muted);opacity:.85}
+.loginPanel input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.loginPanel button{width:100%;margin-top:16px;font-family:var(--font-body);font-weight:600;font-size:14.5px;
+  color:var(--accent-ink);background:var(--accent);border:none;border-radius:999px;padding:12px;cursor:pointer;
+  transition:filter .15s,transform .12s}
+.loginPanel button:hover{filter:brightness(1.08)}
+.loginPanel button:active{transform:scale(.98)}
+.loginPanel .foot{margin-top:11px;font-size:12px;color:var(--muted);text-align:center}
 
-.hero{max-width:780px;margin:52px auto 0}
-.kick{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--gold-deep);margin-bottom:12px}
-h1{font-family:var(--font-display);font-weight:600;font-size:clamp(38px,4.8vw,60px);line-height:1.04;letter-spacing:-.02em}
-h1 em{font-style:italic;font-weight:500;color:var(--gold)}
-.lede{margin:14px auto 0;font-size:15.5px;color:#4c463a;max-width:540px}
+/* ================= hero: left aligned, the message is the design ============ */
+.hero{padding:52px 0 60px;max-width:940px}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(40px,6.4vw,84px);
+  line-height:1.06;letter-spacing:-.042em;padding-bottom:.06em}
+h1 b{color:var(--accent-text);font-weight:800}
+.lede{margin-top:22px;max-width:560px;font-size:clamp(16px,1.35vw,18.5px);color:var(--muted)}
+.cta{display:inline-flex;align-items:center;gap:10px;margin-top:30px;
+  font-family:var(--font-body);font-weight:600;font-size:16px;color:var(--accent-ink);text-decoration:none;
+  background:var(--accent);border-radius:999px;padding:15px 32px;box-shadow:0 14px 32px var(--accent-soft);
+  transition:transform .16s cubic-bezier(.16,1,.3,1),filter .16s,box-shadow .16s}
+.cta:hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 20px 44px var(--accent-soft)}
+.cta:active{transform:scale(.98)}
+.cta svg{width:17px;height:17px;transition:transform .16s}
+.cta:hover svg{transform:translateX(4px)}
 
-/* ================= cloud band: the ring lives HERE, clipped ================= */
-.cloudband{position:relative;height:calc(62vh + 39px);min-height:459px;overflow:hidden;z-index:1;
-  background:radial-gradient(130% 130% at 50% 30%,var(--paper) 0%,#f4efe5 60%,#ece5d6 100%)}
-/* Depth vignette + a soft blend into the band above. Sits ABOVE the cards (they
-   z-index up to 100 inside #scene's own stacking context, which paints at 0). */
+/* ================= cloud band (geometry solver untouched) =================== */
+.cloudband{position:relative;height:calc(60vh + 30px);min-height:440px;overflow:hidden;z-index:1;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--surface-2) 46%,var(--bg) 100%)}
 .cloudband::after{content:"";position:absolute;inset:0;z-index:12;pointer-events:none;
-  background:radial-gradient(118% 80% at 50% 47%,transparent 56%,rgba(206,193,167,.32) 100%),
-             linear-gradient(180deg,rgba(250,247,242,.9) 0%,transparent 10%)}
-/* Symmetric origin: the vanishing point, the ring's centre and the band's centre
-   are the same point, so the vertical space either side of the ring is equal and
-   the fit solver below has the full band to work with. */
+  background:radial-gradient(118% 82% at 50% 47%,transparent 58%,var(--bg) 100%)}
 #scene{position:absolute;inset:0;perspective:2400px;perspective-origin:50% 50%;cursor:grab}
 #scene.dragging{cursor:grabbing}
 #world{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
 /* Every render is 1088x1360, so a fixed 4:5 box means the card's height is known
    before the image loads - the fit solver needs that to guarantee nothing clips. */
 .ph{position:absolute;left:0;top:0;width:var(--cw);aspect-ratio:4/5;object-fit:cover;
-  border-radius:14px;background:var(--paper-2);
-  box-shadow:0 18px 44px rgba(27,24,18,.22),0 2px 6px rgba(27,24,18,.10);
+  border-radius:var(--r-sm);background:var(--surface-2);
+  box-shadow:0 18px 44px rgba(10,10,14,.24),0 2px 6px rgba(10,10,14,.12);
   will-change:transform,opacity,filter;transition:box-shadow .25s ease;
   -webkit-user-drag:none;user-select:none;cursor:pointer}
-.ph:hover{box-shadow:0 28px 66px rgba(27,24,18,.32),0 0 0 1px rgba(193,154,75,.55)}
-.scrollHint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:15;
-  font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
-  color:var(--ink-soft);animation:bob 2.4s ease-in-out infinite;pointer-events:none}
-@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,7px)}}
+.ph:hover{box-shadow:0 28px 66px rgba(10,10,14,.34),0 0 0 2px var(--accent)}
+.dragHint{position:absolute;right:24px;bottom:18px;z-index:15;font-size:12.5px;color:var(--muted);
+  pointer-events:none}
 
-/* ================= below the fold ================= */
-.below{position:relative;z-index:5;background:var(--paper);border-top:1px solid var(--line)}
-.wrap{max-width:1020px;margin:0 auto;padding:90px 30px 70px}
-.big{font-family:var(--font-display);font-weight:600;font-size:clamp(26px,3.4vw,40px);line-height:1.15;
-  letter-spacing:-.015em;max-width:720px}
-.big em{font-style:italic;font-weight:500;color:var(--gold)}
-.sub2{margin-top:16px;max-width:640px;font-size:15.5px;color:#4c463a}
-.grid{margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-.feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 22px 20px}
-.feat .n{font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--gold-deep);
-  text-transform:uppercase}
-.feat h3{font-family:var(--font-display);font-weight:600;font-size:18px;margin:8px 0 6px}
-.feat p{font-size:13.5px;color:var(--ink-soft)}
-.steps{margin-top:56px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
-  font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
-.steps b{color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
-.steps span{color:var(--gold)}
-.cta{display:inline-block;font-weight:600;font-size:15px;color:#fff;text-decoration:none;font-family:var(--font-body);
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:12px;padding:14px 38px;
-  box-shadow:0 16px 40px rgba(163,127,53,.35)}
-.cta:hover{filter:brightness(1.05)}
-.heroCta{margin-top:22px;display:flex;gap:16px;align-items:center;justify-content:center}
-.heroCta .from{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-soft)}
-.price{font-family:var(--font-display);font-weight:600;font-size:30px;margin-top:10px;color:var(--ink)}
-.price span{font-size:14px;color:var(--ink-soft);font-family:var(--font-body)}
-.feat.pop{border-color:var(--gold);box-shadow:0 14px 40px rgba(193,154,75,.18)}
-.addons{margin-top:26px;text-align:center;font-family:var(--font-mono);font-size:10px;font-weight:700;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
-.addons a{color:var(--gold-deep);text-decoration:underline}
-.sampleCard{position:relative;margin:64px auto 0;max-width:520px;text-align:center;overflow:hidden;
-  background:linear-gradient(180deg,var(--card) 0%,#fdfaf4 100%);
-  border:1px solid var(--line);border-radius:22px;padding:44px 40px 34px;
-  box-shadow:0 30px 70px rgba(163,127,53,.14),0 2px 0 rgba(255,255,255,.6) inset}
-.sampleGlow{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:420px;height:240px;
-  background:radial-gradient(closest-side,rgba(193,154,75,.28),transparent 72%);pointer-events:none;z-index:0}
-.sampleBadge{position:relative;z-index:1;width:52px;height:52px;margin:0 auto 18px;border-radius:50%;
-  display:grid;place-items:center;color:#fff;
-  background:linear-gradient(150deg,var(--gold),var(--gold-deep));
-  box-shadow:0 12px 26px rgba(163,127,53,.4)}
-.sampleBadge svg{width:24px;height:24px}
-.sampleCard h3{position:relative;z-index:1;font-family:var(--font-display);font-weight:600;font-size:25px;letter-spacing:-.01em}
-.sampleCard p{position:relative;z-index:1;margin:10px auto 0;font-size:13.5px;color:var(--ink-soft);max-width:380px;line-height:1.55}
-.sampleCard form{position:relative;z-index:1;margin-top:26px;display:flex;flex-direction:column;gap:14px;text-align:left}
-.sampleCard .field label{display:block;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;padding-left:2px}
-.sampleCard input{width:100%;font-size:14.5px;color:var(--ink);background:var(--paper);font-family:var(--font-body);
-  border:1px solid var(--line);border-radius:10px;padding:13px 15px;outline:none;transition:border-color .15s,box-shadow .15s}
-.sampleCard input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(193,154,75,.14)}
-.sampleCard button{margin-top:4px;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
-  font-weight:600;font-size:14.5px;color:#fff;border:none;cursor:pointer;
-  background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:11px;padding:14px;
-  font-family:var(--font-body);box-shadow:0 14px 30px rgba(163,127,53,.32);transition:transform .15s,filter .15s}
-.sampleCard button:hover{filter:brightness(1.06);transform:translateY(-1px)}
+/* ================= how it works: offset rhythm, not cards ================== */
+.band{padding:96px 0}
+.h2{font-family:var(--font-display);font-weight:700;font-size:clamp(28px,3.7vw,48px);
+  line-height:1.1;letter-spacing:-.035em;max-width:720px;padding-bottom:.05em}
+.steps{margin-top:56px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:34px}
+.step{border-top:2px solid var(--ink);padding-top:20px}
+.step:nth-child(2){margin-top:44px}
+.step:nth-child(3){margin-top:88px}
+.step h3{font-family:var(--font-display);font-weight:700;font-size:clamp(20px,2.1vw,27px);
+  letter-spacing:-.028em;line-height:1.15}
+.step p{margin-top:9px;font-size:15px;color:var(--muted)}
+
+/* ================= packs: asymmetric, one is the hero tile ================= */
+.packs{margin-top:52px;display:grid;grid-template-columns:1.22fr 1fr;gap:18px;align-items:stretch}
+.pack{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:30px 30px 32px;
+  display:flex;flex-direction:column;transition:transform .22s cubic-bezier(.16,1,.3,1),box-shadow .22s}
+.pack:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.pack .nm{font-size:13.5px;font-weight:600;color:var(--muted)}
+.pack .amt{font-family:var(--font-display);font-weight:800;letter-spacing:-.04em;line-height:1;
+  font-size:clamp(38px,4.4vw,58px);margin-top:14px}
+.pack .amt span{font-family:var(--font-body);font-size:15px;font-weight:500;letter-spacing:0;color:var(--muted)}
+.pack h3{margin-top:14px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:-.02em}
+.pack p{margin-top:7px;font-size:14.5px;color:var(--muted)}
+.pack.hero{grid-row:span 2;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);
+  justify-content:center}
+.pack.hero .nm,.pack.hero p,.pack.hero .amt span{color:rgba(255,255,255,.82)}
+.pack.hero .amt{font-size:clamp(52px,7vw,92px);margin-top:18px}
+.pack.hero h3{font-size:24px;margin-top:18px}
+.pack.hero p{max-width:330px;font-size:15.5px}
+.tag{align-self:flex-start;margin-top:20px;font-size:12.5px;font-weight:600;
+  background:rgba(255,255,255,.17);color:#fff;border-radius:999px;padding:6px 14px}
+.addons{margin-top:30px;font-size:15px;color:var(--muted)}
+.addons a{color:var(--accent-text);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* ================= free sample: full bleed accent block ==================== */
+.sampleBlock{background:var(--accent);color:var(--accent-ink);padding:88px 0}
+.sampleGrid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.sampleBlock h2{font-family:var(--font-display);font-weight:800;font-size:clamp(30px,4.1vw,54px);
+  line-height:1.06;letter-spacing:-.038em;padding-bottom:.05em}
+.sampleBlock .say{margin-top:18px;max-width:430px;font-size:16.5px;color:rgba(255,255,255,.86)}
+.sampleCard{background:var(--surface);border-radius:var(--r);padding:32px;box-shadow:0 30px 70px rgba(6,6,20,.28)}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.sampleCard input{width:100%;font-family:var(--font-body);font-size:15.5px;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 15px;outline:none;
+  transition:border-color .15s,box-shadow .15s}
+.sampleCard input::placeholder{color:var(--muted);opacity:.8}
+.sampleCard input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sampleCard button{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;margin-top:4px;
+  font-family:var(--font-body);font-weight:600;font-size:16px;color:var(--accent-ink);background:var(--accent);
+  border:none;border-radius:999px;padding:15px;cursor:pointer;transition:filter .15s,transform .12s}
+.sampleCard button:hover{filter:brightness(1.08)}
+.sampleCard button:active{transform:scale(.98)}
 .sampleCard button svg{width:16px;height:16px;transition:transform .15s}
 .sampleCard button:hover svg{transform:translateX(3px)}
-.sampleOk{position:relative;z-index:1;margin-top:14px;font-size:13.5px;color:var(--gold-deep);font-weight:600}
-.sampleFoot{position:relative;z-index:1;margin-top:18px;font-family:var(--font-mono);font-size:9px;font-weight:700;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);opacity:.75}
-.footer{border-top:1px solid var(--line);padding:26px 34px;font-family:var(--font-mono);
-  font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
-  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.sampleOk{margin-top:14px;font-size:14.5px;font-weight:600;color:var(--accent-text)}
+.sampleFoot{margin-top:16px;font-size:13px;color:var(--muted)}
 
-/* lightbox */
-#lightbox{position:fixed;inset:0;z-index:60;background:rgba(20,18,14,.86);display:none;
+/* ================= footer ================= */
+.footer{padding:34px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+  font-size:13.5px;color:var(--muted);border-top:1px solid var(--line)}
+.footer a{color:var(--muted);text-decoration:none}
+.footer a:hover{color:var(--accent-text)}
+
+/* ================= lightbox ================= */
+#lightbox{position:fixed;inset:0;z-index:60;background:rgba(8,8,12,.9);display:none;
   align-items:center;justify-content:center;cursor:zoom-out}
 #lightbox.show{display:flex}
-#lightbox img{max-width:min(88vw,560px);max-height:88vh;border-radius:12px;box-shadow:0 40px 120px rgba(0,0,0,.5)}
+#lightbox img{max-width:min(88vw,560px);max-height:88vh;border-radius:var(--r-sm);
+  box-shadow:0 40px 120px rgba(0,0,0,.6)}
 
-@media (max-width:700px){
-  .chrome{position:static;text-align:center;margin-bottom:8px}
-  .hero{margin-top:20px}
-  /* 38px was wider than a phone screen for this headline, so the page itself
-     overflowed and pushed the lede and the login button off the right edge. */
-  h1{font-size:clamp(27px,7.6vw,42px)}
-  .lede{font-size:14.5px}
-  .heroCta{flex-direction:column;gap:10px}
-  .cloudband{height:56vh;min-height:340px} /* --cw is solved in JS, not fixed here */
-  .loginPanel{right:-8px;width:calc(100vw - 40px);max-width:300px}
+/* ================= mobile: every multi column layout collapses ============= */
+@media (max-width:900px){
+  .steps{grid-template-columns:1fr;gap:28px}
+  .step:nth-child(2),.step:nth-child(3){margin-top:0}
+  .packs{grid-template-columns:1fr}
+  .pack.hero{grid-row:auto}
+  .sampleGrid{grid-template-columns:1fr;gap:32px}
+}
+@media (max-width:640px){
+  .shell{padding:0 20px}
+  .hero{padding:34px 0 44px}
+  .band{padding:66px 0}
+  .cloudband{height:56vh;min-height:330px}  /* --cw is solved in JS, not fixed here */
+  .sampleBlock{padding:64px 0}
+  .sampleCard{padding:24px}
+  .cta{width:100%;justify-content:center}
+  .loginPanel{right:0;width:calc(100vw - 40px);max-width:302px}
+  .dragHint{right:16px;bottom:12px;font-size:11.5px}
 }
 </style><script src="/landing-images/manifest.js"></script></head><body>
 
-<div class="topband">
-  <div class="chrome">
-    <div class="brand">Muse <em>Studio</em></div>
-    <div class="sub">brand in, scheduled posts out</div>
-  </div>
-  <div class="loginwrap">
-    <button class="loginIcon" id="loginIcon" aria-label="Client login" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
-    </button>
-    <form class="loginPanel" id="loginPanel">
-      <h2>Client login</h2>
-      <div class="hint">Your brand's studio, where you left it.</div>
-      <label for="em">Email</label>
-      <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
-      <label for="pw">Password</label>
-      <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
-      <button type="submit">Enter the studio</button>
-      <div class="foot">Beta access &middot; saved per brand</div>
-    </form>
-  </div>
-
-  <div class="hero">
-    <div class="kick">Done-for-you social content</div>
-    <h1>Your brand's content, <em>done.</em></h1>
-    <p class="lede">Carousels, stories and ad graphics in your brand's exact look and voice, created from your website alone. Delivered ready to post.</p>
-    <div class="heroCta">
-      <a class="cta" href="#sample">Get a free sample</a>
-      <span class="from">packs from &euro;240</span>
+<div class="shell">
+  <nav class="nav">
+    <div class="wordmark">muse <b>studio</b></div>
+    <div class="loginwrap">
+      <button class="loginIcon" id="loginIcon" type="button">log in</button>
+      <form class="loginPanel" id="loginPanel">
+        <h2>client login</h2>
+        <div class="hint">your brand's studio, where you left it.</div>
+        <label for="em">email</label>
+        <input id="em" type="email" autocomplete="email" placeholder="you@brand.com">
+        <label for="pw">password</label>
+        <input id="pw" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+        <button type="submit">enter the studio</button>
+        <div class="foot">beta access, saved per brand</div>
+      </form>
     </div>
-  </div>
+  </nav>
+
+  <header class="hero">
+    <h1 class="rise" style="animation-delay:.04s">your website <b>already knows</b> what to post.</h1>
+    <p class="lede rise" style="animation-delay:.16s">give us the url. you get finished posts in your own colors, with your own products, captions included.</p>
+    <a class="cta rise" href="#sample" style="animation-delay:.26s">get a free sample
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </header>
 </div>
 
 <div class="cloudband">
   <div id="scene"><div id="world"></div></div>
-  <div class="scrollHint">scroll &darr;</div>
+  <div class="dragHint">drag to spin</div>
 </div>
 
-<div class="below">
-  <div class="wrap">
-    <div class="big">Designer-grade content, at <em>pack</em> prices.</div>
-    <p class="sub2">Every pack is built from your website alone: your colors, your voice, your real products, never stock templates. You get finished posts with captions, ready to publish. No briefs, no meetings, no agency retainer.</p>
-    <div class="grid">
-      <div class="feat"><div class="n">Pack S</div><div class="price">&euro;240</div><h3>8 feed posts</h3><p>Carousels and single graphics in your brand, captions included.</p></div>
-      <div class="feat pop"><div class="n">Pack M &middot; most popular</div><div class="price">&euro;440</div><h3>16 posts + 8 stories</h3><p>A full month of feed and story content, captions included.</p></div>
-      <div class="feat"><div class="n">Monthly</div><div class="price">&euro;640<span>/mo</span></div><h3>24 posts + 12 stories</h3><p>Delivered weekly, priority requests, fresh ideas every batch.</p></div>
+<div class="shell">
+  <section class="band">
+    <h2 class="h2 rv">no briefs. no meetings. no agency retainer.</h2>
+    <div class="steps">
+      <div class="step rv"><h3>you send a link</h3><p>just your website. that is the whole brief.</p></div>
+      <div class="step rv"><h3>we read your site</h3><p>colors, voice and real products, pulled straight from your own pages.</p></div>
+      <div class="step rv"><h3>you get posts</h3><p>finished graphics with captions written, ready to publish.</p></div>
     </div>
-    <p class="addons">Want it posted for you too, or your own white-labeled studio? <a href="mailto:anikoailab@gmail.com?subject=Muse%20Studio%20-%20posting%20%2F%20white-label">Get in touch</a></p>
+  </section>
 
-    <div class="sampleCard" id="sample">
-      <div class="sampleGlow"></div>
-      <div class="sampleBadge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.2 5.6 6 .5-4.6 3.9 1.5 5.9L12 15.6l-5.1 3.1 1.5-5.9-4.6-3.9 6-.5z"/></svg>
+  <section class="band" style="padding-top:0">
+    <h2 class="h2 rv">pick a pack. that is the whole pricing page.</h2>
+    <div class="packs">
+      <div class="pack hero rv">
+        <div class="nm">pack m</div>
+        <div class="amt">&euro;440</div>
+        <h3>16 posts and 8 stories</h3>
+        <p>a full month of feed and stories, captions included.</p>
+        <div class="tag">most picked</div>
       </div>
-      <h3>Get a free sample post for your brand</h3>
-      <p>Leave your email and your website. We'll create one real post in your brand's own look and send it back &mdash; free, no strings.</p>
-      <form id="sampleForm">
-        <div class="field">
-          <label for="sEmail">Email</label>
-          <input id="sEmail" type="email" required placeholder="you@brand.com" autocomplete="email">
-        </div>
-        <div class="field">
-          <label for="sSite">Website</label>
-          <input id="sSite" type="text" required placeholder="yourbrand.com" autocomplete="url">
-        </div>
-        <button type="submit"><span>Send me my sample</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
-      </form>
-      <div class="sampleOk" id="sampleOk"></div>
-      <div class="sampleFoot">No card, no calls &middot; usually back within a couple of days</div>
+      <div class="pack rv">
+        <div class="nm">pack s</div>
+        <div class="amt">&euro;240</div>
+        <h3>8 feed posts</h3>
+        <p>carousels and single graphics in your brand, captions included.</p>
+      </div>
+      <div class="pack rv">
+        <div class="nm">monthly</div>
+        <div class="amt">&euro;640<span> /mo</span></div>
+        <h3>24 posts and 12 stories</h3>
+        <p>delivered weekly, priority requests, fresh angles every batch.</p>
+      </div>
+    </div>
+    <p class="addons rv">want them posted for you too, or your own white labeled studio?
+      <a href="mailto:anikoailab@gmail.com?subject=Muse%20Studio%20-%20posting%20%2F%20white-label">get in touch</a></p>
+  </section>
+</div>
+
+<section class="sampleBlock" id="sample">
+  <div class="shell">
+    <div class="sampleGrid">
+      <div>
+        <h2 class="rv">one free post, in your brand.</h2>
+        <p class="say rv">leave your email and your site. we make one real post in your own look and send it over. no card, no calls.</p>
+      </div>
+      <div class="sampleCard rv">
+        <form id="sampleForm">
+          <div class="field">
+            <label for="sEmail">email</label>
+            <input id="sEmail" type="email" required placeholder="you@brand.com" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="sSite">website</label>
+            <input id="sSite" type="text" required placeholder="yourbrand.com" autocomplete="url">
+          </div>
+          <button type="submit"><span>send me my sample</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+        <div class="sampleOk" id="sampleOk"></div>
+        <div class="sampleFoot">usually back within a couple of days</div>
+      </div>
     </div>
   </div>
-  <div class="footer"><span>Muse Studio</span><span>drag the ring &middot; click a render to view</span></div>
+</section>
+
+<div class="shell">
+  <div class="footer">
+    <span>muse studio</span>
+    <a href="mailto:anikoailab@gmail.com">anikoailab@gmail.com</a>
+  </div>
 </div>
 
-<div id="lightbox"><img alt=""></div>
+<div id="lightbox"><img alt="Selected render, enlarged"></div>
 
 <script>
 /* ---------- images: the live render library IS the show; placeholders only if empty ---------- */
 function placeholder(i){
-  const P=[["#c19a4b","#1b1812"],["#1b1812","#faf7f2"],["#a37f35","#fffdf9"],["#2e2a3f","#d4b06a"]];
+  const P=[["#2b3fff","#ffffff"],["#101014","#f3f3f1"],["#4b5cff","#ffffff"],["#1c1c23","#96a2ff"]];
   const W=["HOOK","WHY","SHOP","MUSE"];
   const [bg,fg]=P[i%P.length];
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="${bg}"/><text x="60" y="180" font-family="Georgia,serif" font-style="italic" font-size="64" fill="${fg}" opacity=".55">Muse</text><text x="55" y="560" font-family="Georgia,serif" font-weight="700" font-size="118" fill="${fg}">${W[i%W.length]}</text><rect x="60" y="880" width="120" height="7" fill="${fg}" opacity=".7"/></svg>`;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="${bg}"/><text x="55" y="560" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="118" fill="${fg}">${W[i%W.length]}</text><rect x="60" y="880" width="120" height="7" fill="${fg}" opacity=".7"/></svg>`;
   return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
 async function loadImages(){
@@ -327,7 +400,7 @@ function computeLayout(){
 function build(urls){
   const N=urls.length,GA=Math.PI*(3-Math.sqrt(5)); /* golden-angle spiral: true sphere, no two items share a spot */
   items=urls.map((u,i)=>{
-    const img=new Image();img.src=u;img.className="ph";img.draggable=false;
+    const img=new Image();img.src=u;img.className="ph";img.draggable=false;img.alt="";
     const yf=1-(i/(N-1||1))*2;              /* -1..1 top to bottom, evenly spaced */
     const r=Math.sqrt(Math.max(0,1-yf*yf)); /* latitude radius at this height */
     const th=GA*i;
@@ -369,6 +442,27 @@ addEventListener("pointermove",e=>{
 addEventListener("pointerup",()=>{dragging=false;scene.classList.remove("dragging");setTimeout(()=>moved=false,50);});
 addEventListener("resize",computeLayout);
 
+/* ---------- scroll reveal: IntersectionObserver, never a scroll listener ----------
+   Only arms itself when motion is welcome AND the API exists. Everything below the
+   fold stays plainly visible otherwise, because content must never depend on JS. */
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window){
+  document.documentElement.classList.add("js-rv");
+  const io=new IntersectionObserver(es=>{
+    for(const e of es)if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}
+  },{threshold:.18,rootMargin:"0px 0px -8% 0px"});
+  document.querySelectorAll(".rv").forEach((el,i)=>{
+    el.style.transitionDelay=(i%3)*70+"ms"; /* stagger within a row, never across the page */
+    io.observe(el);
+  });
+  /* Safety net: if anything is still hidden after load (an observer that never fired,
+     a section already past the viewport), show it rather than leave a blank page. */
+  addEventListener("load",()=>setTimeout(()=>
+    document.querySelectorAll(".rv:not(.in)").forEach(el=>{
+      const r=el.getBoundingClientRect();
+      if(r.top<innerHeight&&r.bottom>0)el.classList.add("in");
+    }),900));
+}
+
 /* ---------- login popover ---------- */
 const icon=document.getElementById("loginIcon"),panel=document.getElementById("loginPanel");
 icon.onclick=e=>{e.stopPropagation();panel.classList.toggle("open");if(panel.classList.contains("open"))document.getElementById("em").focus();};
@@ -381,15 +475,15 @@ const sForm=document.getElementById("sampleForm"),sOk=document.getElementById("s
 sForm.addEventListener("submit",async e=>{
   e.preventDefault();
   const email=document.getElementById("sEmail").value.trim(),website=document.getElementById("sSite").value.trim();
-  sOk.textContent="Sending...";
+  sOk.textContent="sending...";
   try{
     const r=await fetch("/api/sample-request",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({email,website})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(j.error||"try again");
     sForm.style.display="none";
-    sOk.textContent="Request received. Your sample is on its way to your inbox.";
-  }catch(err){sOk.textContent="Could not send: "+(err.message||err);}
+    sOk.textContent="got it. your sample is on its way to your inbox.";
+  }catch(err){sOk.textContent="could not send: "+(err.message||err);}
 });
 
 loadImages().then(urls=>{build(urls);frame();});
