@@ -1,0 +1,131 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muse Studio - pick a colour</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* Deliberately neutral grey chrome: any colour in the toolbar would bias how the
+   palettes underneath read. This page is a decision tool, not a design artefact. */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Instrument Sans",-apple-system,system-ui,sans-serif;background:#1d1d20;color:#ececed;
+  height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.bar{flex:none;padding:14px 20px;display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+  background:#141416;border-bottom:1px solid #2c2c31}
+.title{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.title span{color:#8b8b95;font-weight:400}
+.group{display:flex;align-items:center;gap:8px}
+.lab{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:#75757f;margin-right:2px}
+.opt{display:flex;align-items:center;gap:9px;padding:8px 15px 8px 9px;border-radius:999px;cursor:pointer;
+  background:#212126;border:1.5px solid transparent;color:#d6d6da;font-size:13.5px;font-weight:600;
+  font-family:inherit;transition:border-color .15s,background .15s}
+.opt:hover{background:#292930}
+.opt[aria-pressed="true"]{border-color:#6f6f7a;background:#2e2e36;color:#fff}
+.dot{width:19px;height:19px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.mini{padding:8px 15px;border-radius:999px;cursor:pointer;background:#212126;border:1.5px solid transparent;
+  color:#d6d6da;font-size:13px;font-weight:600;font-family:inherit;transition:border-color .15s,background .15s}
+.mini:hover{background:#292930}
+.mini[aria-pressed="true"]{border-color:#6f6f7a;background:#2e2e36;color:#fff}
+.note{margin-left:auto;font-size:12px;color:#75757f;max-width:290px;line-height:1.45}
+.stage{flex:1;min-height:0;display:flex;justify-content:center;background:#26262b;padding:0}
+iframe{border:0;width:100%;height:100%;background:#fff;transition:max-width .25s ease}
+</style></head><body>
+
+<div class="bar">
+  <div class="title">muse studio <span>/ pick a colour</span></div>
+
+  <div class="group" id="palettes">
+    <span class="lab">palette</span>
+    <button class="opt" data-p="chartreuse"><span class="dot" style="background:#c6f000"></span>acid</button>
+    <button class="opt" data-p="coral"><span class="dot" style="background:#d61e46"></span>coral</button>
+    <button class="opt" data-p="forest"><span class="dot" style="background:#0f6b47"></span>forest</button>
+  </div>
+
+  <div class="group" id="modes">
+    <span class="lab">mode</span>
+    <button class="mini" data-m="light">light</button>
+    <button class="mini" data-m="dark">dark</button>
+  </div>
+
+  <div class="group" id="widths">
+    <span class="lab">screen</span>
+    <button class="mini" data-w="0">desktop</button>
+    <button class="mini" data-w="430">phone</button>
+  </div>
+
+  <div class="note">this is the real page, recoloured live. scroll it, hover the cards, drag the cloud.</div>
+</div>
+
+<div class="stage"><iframe id="site" src="/" title="Muse Studio preview"></iframe></div>
+
+<script>
+/* Each palette is a complete token set for BOTH modes. Supplying every token (not
+   just the accent) means the preview does not inherit whatever colour scheme the
+   viewer's OS happens to be in - what you see is what the visitor would get. */
+const PALETTES={
+  chartreuse:{
+    light:{bg:"#f4f4f0",surface:"#ffffff","surface-2":"#e9e9e1",ink:"#111309",muted:"#585b4b",line:"#dcdcd0",
+      accent:"#c6f000","accent-ink":"#10120a","accent-text":"#4c6600","accent-soft":"rgba(198,240,0,.20)",
+      "accent-ink-soft":"rgba(16,18,10,.74)","accent-chip":"rgba(16,18,10,.13)",
+      shadow:"0 16px 40px rgba(17,19,9,.10)","shadow-lift":"0 26px 60px rgba(17,19,9,.16)"},
+    dark:{bg:"#0b0c08",surface:"#14160f","surface-2":"#1b1e14",ink:"#f1f2ea",muted:"#9a9e8c",line:"#262a1c",
+      accent:"#c6f000","accent-ink":"#10120a","accent-text":"#c6f000","accent-soft":"rgba(198,240,0,.16)",
+      "accent-ink-soft":"rgba(16,18,10,.74)","accent-chip":"rgba(16,18,10,.13)",
+      shadow:"0 16px 40px rgba(0,0,0,.5)","shadow-lift":"0 26px 60px rgba(0,0,0,.62)"}},
+  coral:{
+    light:{bg:"#f8f5f4",surface:"#ffffff","surface-2":"#efe9e7",ink:"#17100e",muted:"#6a5b57",line:"#e5dcd9",
+      accent:"#d61e46","accent-ink":"#ffffff","accent-text":"#cf2445","accent-soft":"rgba(214,30,70,.09)",
+      "accent-ink-soft":"rgba(255,255,255,.86)","accent-chip":"rgba(255,255,255,.20)",
+      shadow:"0 16px 40px rgba(23,16,14,.10)","shadow-lift":"0 26px 60px rgba(23,16,14,.16)"},
+    dark:{bg:"#100b0b",surface:"#1a1213","surface-2":"#221718",ink:"#f5efee",muted:"#a8938f",line:"#2c1f20",
+      accent:"#ff4d6a","accent-ink":"#1a0508","accent-text":"#ff8095","accent-soft":"rgba(255,77,106,.14)",
+      "accent-ink-soft":"rgba(26,5,8,.74)","accent-chip":"rgba(26,5,8,.14)",
+      shadow:"0 16px 40px rgba(0,0,0,.5)","shadow-lift":"0 26px 60px rgba(0,0,0,.62)"}},
+  forest:{
+    light:{bg:"#f2f2ee",surface:"#ffffff","surface-2":"#e6e8e1",ink:"#0e1410",muted:"#525c54",line:"#d9ded6",
+      accent:"#0f6b47","accent-ink":"#ffffff","accent-text":"#0d5c3d","accent-soft":"rgba(15,107,71,.09)",
+      "accent-ink-soft":"rgba(255,255,255,.86)","accent-chip":"rgba(255,255,255,.20)",
+      shadow:"0 16px 40px rgba(14,20,16,.10)","shadow-lift":"0 26px 60px rgba(14,20,16,.16)"},
+    dark:{bg:"#0a0d0b",surface:"#121712","surface-2":"#182019",ink:"#eef2ec",muted:"#93a196",line:"#212a23",
+      accent:"#0f7a52","accent-ink":"#ffffff","accent-text":"#55c79a","accent-soft":"rgba(15,122,82,.16)",
+      "accent-ink-soft":"rgba(255,255,255,.86)","accent-chip":"rgba(255,255,255,.20)",
+      shadow:"0 16px 40px rgba(0,0,0,.5)","shadow-lift":"0 26px 60px rgba(0,0,0,.62)"}}
+};
+
+const frame=document.getElementById("site");
+/* ?p=forest&m=dark makes any combination a shareable link */
+const q=new URLSearchParams(location.search);
+let pal=PALETTES[q.get("p")]?q.get("p"):"coral",
+    mode=q.get("m")==="dark"?"dark":"light",
+    width=q.get("w")==="phone"?430:0;
+
+function apply(){
+  const doc=frame.contentDocument;
+  if(!doc||!doc.head)return;
+  const tokens=PALETTES[pal][mode];
+  let css=":root{";
+  for(const k in tokens)css+="--"+k+":"+tokens[k]+";";
+  css+="}";
+  let tag=doc.getElementById("palette-override");
+  if(!tag){tag=doc.createElement("style");tag.id="palette-override";doc.head.appendChild(tag);}
+  /* appended last, so it beats both the page's :root and its dark media block */
+  tag.textContent=css;
+  doc.documentElement.style.colorScheme=mode;
+}
+function paint(){
+  for(const b of document.querySelectorAll("[data-p]"))b.setAttribute("aria-pressed",b.dataset.p===pal);
+  for(const b of document.querySelectorAll("[data-m]"))b.setAttribute("aria-pressed",b.dataset.m===mode);
+  for(const b of document.querySelectorAll("[data-w]"))b.setAttribute("aria-pressed",+b.dataset.w===width);
+  frame.style.maxWidth=width?width+"px":"none";
+}
+document.getElementById("palettes").onclick=e=>{
+  const b=e.target.closest("[data-p]"); if(!b)return; pal=b.dataset.p; paint(); apply();};
+document.getElementById("modes").onclick=e=>{
+  const b=e.target.closest("[data-m]"); if(!b)return; mode=b.dataset.m; paint(); apply();};
+document.getElementById("widths").onclick=e=>{
+  const b=e.target.closest("[data-w]"); if(!b)return; width=+b.dataset.w; paint();
+  /* the cloud solves its layout against the frame width, so nudge it to re-fit */
+  setTimeout(()=>{try{frame.contentWindow.dispatchEvent(new Event("resize"));}catch(_){}} ,300);};
+
+frame.addEventListener("load",()=>{apply();paint();});
+paint();
+</script>
+</body></html>
