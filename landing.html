@@ -55,11 +55,11 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
 .lede{margin:14px auto 0;font-size:15.5px;color:#4c463a;max-width:540px}
 
 /* ================= cloud band: the ring lives HERE, clipped ================= */
-.cloudband{position:relative;height:62vh;min-height:420px;overflow:hidden;z-index:1;
+.cloudband{position:relative;height:calc(62vh + 20px);min-height:440px;overflow:hidden;z-index:1;
   background:radial-gradient(130% 130% at 50% 30%,var(--paper) 0%,#f4efe5 60%,#ece5d6 100%)}
 #scene{position:absolute;inset:0;perspective:1600px;perspective-origin:50% 42%;cursor:grab}
 #scene.dragging{cursor:grabbing}
-#world{position:absolute;left:50%;top:47%;transform-style:preserve-3d}
+#world{position:absolute;left:50%;top:calc(47% + 20px);transform-style:preserve-3d}
 .ph{position:absolute;left:0;top:0;width:var(--cw);border-radius:11px;
   box-shadow:0 24px 60px rgba(27,24,18,.25);will-change:transform,opacity;
   -webkit-user-drag:none;user-select:none;cursor:pointer;background:var(--paper-2)}
