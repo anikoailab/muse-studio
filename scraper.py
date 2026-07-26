@@ -765,9 +765,13 @@ def enrich_brand(brand, html_text):
     shown = 0
     # Every candidate product photo, individually labeled, so the model can flag which ones
     # are not really product photography (Wix/Squarespace sites especially reuse opaque
-    # media hashes for icons and badges that static parsing has no way to tell from a bottle).
+    # media hashes for icons and badges that static parsing has no way to tell from a bottle;
+    # supplement sites in particular mix real packshots with ingredient-certification badges
+    # like Carnipure/KSM-66/AstraGin in the same grid). Anything past this cap is never shown
+    # to the model and is auto-kept unjudged (see product_idx_shown below) - so the cap has to
+    # cover a realistic shop grid, not just a "hero + 3" homepage.
     product_idx_shown = []
-    for i, p in enumerate(products[:4]):
+    for i, p in enumerate(products[:12]):
         v = _vision_url(_img_url(p) or "")
         if not v:
             continue
