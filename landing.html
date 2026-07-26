@@ -246,33 +246,41 @@ const world=document.getElementById("world"),scene=document.getElementById("scen
 const lb=document.getElementById("lightbox"),lbImg=lb.querySelector("img");
 lb.onclick=()=>lb.classList.remove("show");
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){lb.classList.remove("show");panel.classList.remove("open");}});
-let items=[],rotY=0,tilt=-.1,velY=0,auto=.0016,dragging=false,moved=false,px=0,py=0,R=0;
+let items=[],rotY=0,tilt=-.14,velY=0,auto=.0013,dragging=false,moved=false,px=0,py=0,R=0,itemN=14;
 
-function radius(){return Math.max(scene.clientWidth,720)*.34}
+/* Radius must grow with item count: a flat ring's front-row images sit R*dtheta apart,
+   so too many images on too small a ring pile on top of each other (exactly what happened
+   at 26 images on a viewport-width-only radius). Scale R off sqrt(N) and the actual
+   rendered image width so neighbours always clear each other with room to spare. */
+function radius(){
+  const cw=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cw"))||200;
+  const need=cw*1.55*Math.sqrt(Math.max(itemN,6))/2;
+  return Math.max(need, Math.min(scene.clientWidth,scene.clientHeight)*.3);
+}
 function build(urls){
+  itemN=urls.length;
   R=radius();
-  const N=urls.length;
+  const N=urls.length,GA=Math.PI*(3-Math.sqrt(5)); /* golden-angle spiral: true sphere, no two items share a spot */
   items=urls.map((u,i)=>{
     const img=new Image();img.src=u;img.className="ph";img.draggable=false;
     img.onclick=()=>{if(moved)return;lbImg.src=u;lb.classList.add("show");};
     world.appendChild(img);
-    const th=(i/N)*Math.PI*2;
-    /* two gently offset rows so it reads as a cloud, but stays inside the band */
-    const y=(i%2?1:-1)*.16+((i*7)%5-2)*.02;
-    return {el:img,th,y};
+    const yf=1-(i/(N-1||1))*2;              /* -1..1 top to bottom, evenly spaced */
+    const r=Math.sqrt(Math.max(0,1-yf*yf)); /* latitude radius at this height */
+    const th=GA*i;
+    return {el:img,x:Math.cos(th)*r,y:yf*.62,z:Math.sin(th)*r};
   });
 }
 function frame(){
   rotY+=auto+velY;velY*=.95;
-  const ct=Math.cos(tilt),st=Math.sin(tilt);
+  const cy=Math.cos(rotY),sy=Math.sin(rotY),ct=Math.cos(tilt),st=Math.sin(tilt);
   for(const it of items){
-    const a=it.th+rotY;
-    let x=Math.cos(a),z=Math.sin(a),y=it.y;
-    let y2=y*ct-z*st*.28, z2=z;
-    const X=x*R*1.28,Y=y2*R,Z=z2*R*.9;
+    let x=it.x*cy+it.z*sy, z=-it.x*sy+it.z*cy, y=it.y;
+    let y2=y*ct-z*st, z2=y*st+z*ct;
+    const X=x*R,Y=y2*R,Z=z2*R;
     const t=(z2+1)/2; /* 0 back, 1 front */
-    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px) scale(${(.66+t*.46).toFixed(3)})`;
-    it.el.style.opacity=(.5+t*.5).toFixed(3);
+    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px) scale(${(.6+t*.6).toFixed(3)})`;
+    it.el.style.opacity=(.45+t*.55).toFixed(3);
     it.el.style.zIndex=Math.round(t*100);
   }
   requestAnimationFrame(frame);
