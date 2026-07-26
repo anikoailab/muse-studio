@@ -57,12 +57,25 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
 /* ================= cloud band: the ring lives HERE, clipped ================= */
 .cloudband{position:relative;height:calc(62vh + 39px);min-height:459px;overflow:hidden;z-index:1;
   background:radial-gradient(130% 130% at 50% 30%,var(--paper) 0%,#f4efe5 60%,#ece5d6 100%)}
-#scene{position:absolute;inset:0;perspective:1600px;perspective-origin:50% 42%;cursor:grab}
+/* Depth vignette + a soft blend into the band above. Sits ABOVE the cards (they
+   z-index up to 100 inside #scene's own stacking context, which paints at 0). */
+.cloudband::after{content:"";position:absolute;inset:0;z-index:12;pointer-events:none;
+  background:radial-gradient(118% 80% at 50% 47%,transparent 56%,rgba(206,193,167,.32) 100%),
+             linear-gradient(180deg,rgba(250,247,242,.9) 0%,transparent 10%)}
+/* Symmetric origin: the vanishing point, the ring's centre and the band's centre
+   are the same point, so the vertical space either side of the ring is equal and
+   the fit solver below has the full band to work with. */
+#scene{position:absolute;inset:0;perspective:2400px;perspective-origin:50% 50%;cursor:grab}
 #scene.dragging{cursor:grabbing}
-#world{position:absolute;left:50%;top:calc(47% + 20px);transform-style:preserve-3d}
-.ph{position:absolute;left:0;top:0;width:var(--cw);border-radius:11px;
-  box-shadow:0 24px 60px rgba(27,24,18,.25);will-change:transform,opacity;
-  -webkit-user-drag:none;user-select:none;cursor:pointer;background:var(--paper-2)}
+#world{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
+/* Every render is 1088x1360, so a fixed 4:5 box means the card's height is known
+   before the image loads - the fit solver needs that to guarantee nothing clips. */
+.ph{position:absolute;left:0;top:0;width:var(--cw);aspect-ratio:4/5;object-fit:cover;
+  border-radius:14px;background:var(--paper-2);
+  box-shadow:0 18px 44px rgba(27,24,18,.22),0 2px 6px rgba(27,24,18,.10);
+  will-change:transform,opacity,filter;transition:box-shadow .25s ease;
+  -webkit-user-drag:none;user-select:none;cursor:pointer}
+.ph:hover{box-shadow:0 28px 66px rgba(27,24,18,.32),0 0 0 1px rgba(193,154,75,.55)}
 .scrollHint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:15;
   font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
   color:var(--ink-soft);animation:bob 2.4s ease-in-out infinite;pointer-events:none}
@@ -140,8 +153,12 @@ h1 em{font-style:italic;font-weight:500;color:var(--gold)}
 @media (max-width:700px){
   .chrome{position:static;text-align:center;margin-bottom:8px}
   .hero{margin-top:20px}
-  :root{--cw:140px}
-  .cloudband{height:52vh}
+  /* 38px was wider than a phone screen for this headline, so the page itself
+     overflowed and pushed the lede and the login button off the right edge. */
+  h1{font-size:clamp(27px,7.6vw,42px)}
+  .lede{font-size:14.5px}
+  .heroCta{flex-direction:column;gap:10px}
+  .cloudband{height:56vh;min-height:340px} /* --cw is solved in JS, not fixed here */
   .loginPanel{right:-8px;width:calc(100vw - 40px);max-width:300px}
 }
 </style><script src="/landing-images/manifest.js"></script></head><body>
@@ -246,42 +263,98 @@ const world=document.getElementById("world"),scene=document.getElementById("scen
 const lb=document.getElementById("lightbox"),lbImg=lb.querySelector("img");
 lb.onclick=()=>lb.classList.remove("show");
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){lb.classList.remove("show");panel.classList.remove("open");}});
-let items=[],rotY=0,tilt=-.14,velY=0,auto=.0013,dragging=false,moved=false,px=0,py=0,R=0,itemN=14;
+let items=[],rotY=0,tilt=-.12,velY=0,auto=.0011,dragging=false,moved=false,px=0,py=0;
 
-/* Radius must grow with item count: a flat ring's front-row images sit R*dtheta apart,
-   so too many images on too small a ring pile on top of each other (exactly what happened
-   at 26 images on a viewport-width-only radius). Scale R off sqrt(N) and the actual
-   rendered image width so neighbours always clear each other with room to spare. */
-function radius(){
-  const cw=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cw"))||200;
-  const need=cw*1.55*Math.sqrt(Math.max(itemN,6))/2;
-  return Math.max(need, Math.min(scene.clientWidth,scene.clientHeight)*.3);
+/* A card's on-screen box is its centre plus/minus half its size, and CSS perspective
+   multiplies BOTH by D/(D-Z) - a front card is magnified well past its CSS width. The
+   old radius ignored that projection entirely and guessed from item count, so the
+   nearest cards blew up and got sliced by the band's overflow. Instead: solve the real
+   geometry. Sample every card across a full rotation and both tilt extremes (drag moves
+   tilt, so the fit must hold there too) and binary-search the largest radius whose worst
+   case still clears the band's padding. Nothing can clip, at any angle, at any size. */
+const PERSP=2400,SMIN=.58,SMAX=1,PADX=26,PADT=22,PADB=54,TILTS=[-.30,.18],ROTSTEPS=18;
+let CW=200,CH=250,RX=340,RY=180;
+
+/* An ellipsoid, not a sphere: the band is wide and short, so a single radius would be
+   pinned by the tight vertical budget and leave the width empty. Width and height are
+   solved separately - RX (also used for depth, keeping rotation rigid) against the
+   horizontal bound, RY against the vertical one. */
+function sample(fn){
+  for(const it of items){
+    const rho=Math.hypot(it.x,it.z),y0=it.y;
+    for(let k=0;k<ROTSTEPS;k++){
+      const th=2*Math.PI*k/ROTSTEPS,x=rho*Math.cos(th),z=rho*Math.sin(th);
+      for(const tl of TILTS){
+        const ct=Math.cos(tl),st=Math.sin(tl);
+        if(!fn(x,y0*ct-z*st,y0*st+z*ct))return false;
+      }
+    }
+  }
+  return true;
+}
+function fitsX(rx,W){
+  return sample((x,y2,z2)=>{
+    const Z=z2*rx;
+    if(Z>PERSP-140)return false;               /* too close to the camera */
+    const p=PERSP/(PERSP-Z),s=SMIN+(SMAX-SMIN)*((z2+1)/2),hw=CW/2*s;
+    return W/2+p*(x*rx-hw)>=PADX && W/2+p*(x*rx+hw)<=W-PADX;
+  });
+}
+function fitsY(ry,rx,H){
+  return sample((x,y2,z2)=>{
+    const p=PERSP/(PERSP-z2*rx),s=SMIN+(SMAX-SMIN)*((z2+1)/2),hh=CH/2*s;
+    return H/2+p*(y2*ry-hh)>=PADT && H/2+p*(y2*ry+hh)<=H-PADB;
+  });
+}
+function solve(test,hiCap){
+  let lo=4,hi=Math.max(40,hiCap);
+  if(!test(lo))return lo;
+  for(let i=0;i<24;i++){const mid=(lo+hi)/2;test(mid)?lo=mid:hi=mid;}
+  return lo;
+}
+function computeLayout(){
+  const W=scene.clientWidth,H=scene.clientHeight;
+  if(!W||!H||!items.length)return;
+  /* Cap the card to what the band can hold even at the tightest radius, so the searches
+     below always have a valid answer instead of collapsing the cloud to nothing. */
+  const desired=Math.max(126,Math.min(234,W*.143));
+  CW=Math.max(84,Math.min(desired,(H-PADT-PADB)/SMAX/1.25,(W-2*PADX)/SMAX));
+  CH=CW*1.25;
+  document.documentElement.style.setProperty("--cw",CW.toFixed(1)+"px");
+  RX=solve(r=>fitsX(r,W),W*1.1);
+  RY=Math.min(RX,solve(r=>fitsY(r,RX,H),H*1.1));
 }
 function build(urls){
-  itemN=urls.length;
-  R=radius();
   const N=urls.length,GA=Math.PI*(3-Math.sqrt(5)); /* golden-angle spiral: true sphere, no two items share a spot */
   items=urls.map((u,i)=>{
     const img=new Image();img.src=u;img.className="ph";img.draggable=false;
-    img.onclick=()=>{if(moved)return;lbImg.src=u;lb.classList.add("show");};
-    world.appendChild(img);
     const yf=1-(i/(N-1||1))*2;              /* -1..1 top to bottom, evenly spaced */
     const r=Math.sqrt(Math.max(0,1-yf*yf)); /* latitude radius at this height */
     const th=GA*i;
-    return {el:img,x:Math.cos(th)*r,y:yf*.62,z:Math.sin(th)*r};
+    const o={el:img,x:Math.cos(th)*r,y:yf,z:Math.sin(th)*r,hov:0,h:0,lastF:""};
+    img.onclick=()=>{if(moved)return;lbImg.src=u;lb.classList.add("show");};
+    img.onmouseenter=()=>{o.hov=1};img.onmouseleave=()=>{o.hov=0};
+    world.appendChild(img);
+    return o;
   });
+  computeLayout();
 }
 function frame(){
   rotY+=auto+velY;velY*=.95;
   const cy=Math.cos(rotY),sy=Math.sin(rotY),ct=Math.cos(tilt),st=Math.sin(tilt);
   for(const it of items){
-    let x=it.x*cy+it.z*sy, z=-it.x*sy+it.z*cy, y=it.y;
-    let y2=y*ct-z*st, z2=y*st+z*ct;
-    const X=x*R,Y=y2*R,Z=z2*R;
+    const x=it.x*cy+it.z*sy, z=-it.x*sy+it.z*cy, y=it.y;
+    const y2=y*ct-z*st, z2=y*st+z*ct;
     const t=(z2+1)/2; /* 0 back, 1 front */
-    it.el.style.transform=`translate(-50%,-50%) translate3d(${X}px,${Y}px,${Z}px) scale(${(.6+t*.6).toFixed(3)})`;
-    it.el.style.opacity=(.45+t*.55).toFixed(3);
+    it.h+=((it.hov?1:0)-it.h)*.14; /* eased hover lift, JS-driven since transform is too */
+    const s=(SMIN+(SMAX-SMIN)*t)*(1+.055*it.h);
+    it.el.style.transform=`translate(-50%,-50%) translate3d(${(x*RX).toFixed(1)}px,${(y2*RY).toFixed(1)}px,${(z2*RX).toFixed(1)}px) scale(${s.toFixed(3)})`;
+    it.el.style.opacity=(.26+t*.74).toFixed(3);
     it.el.style.zIndex=Math.round(t*100);
+    /* Depth of field: the back of the cloud recedes, the front card is the hero.
+       Quantized + change-checked so we are not rewriting a blur every frame. */
+    const f=`blur(${((1-t)*2.2).toFixed(1)}px) brightness(${(.80+.20*t).toFixed(2)})`;
+    if(f!==it.lastF){it.el.style.filter=f;it.lastF=f;}
   }
   requestAnimationFrame(frame);
 }
@@ -294,7 +367,7 @@ addEventListener("pointermove",e=>{
   tilt=Math.max(-.3,Math.min(.18,tilt+dy*.0012));
 });
 addEventListener("pointerup",()=>{dragging=false;scene.classList.remove("dragging");setTimeout(()=>moved=false,50);});
-addEventListener("resize",()=>{R=radius();});
+addEventListener("resize",computeLayout);
 
 /* ---------- login popover ---------- */
 const icon=document.getElementById("loginIcon"),panel=document.getElementById("loginPanel");
