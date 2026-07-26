@@ -269,15 +269,33 @@ def _category_links(html, origin, exclude_url):
     return out
 
 
+_WIX_MEDIA_RE = re.compile(r'/media/([0-9a-f]+_[0-9a-f]+)(?:~|%7[Ee])mv2', re.I)
+
+
+def _dedupe_key(u):
+    """The same photo reappears under different-looking URLs on two common platforms:
+    - WordPress thumbnail variants: sauce-korma.png, sauce-korma-300x300.png, -150x150.png
+    - Wix: static.wixstatic.com/media/<hash>~mv2.jpg, the SAME url again with a
+      /v1/fit/w_2500,h_1330,.../<hash>~mv2.jpg transform suffix appended, and the encoded-tilde
+      form (%7Emv2 instead of ~mv2) of either - four distinct-looking strings, one real photo.
+    Returns a key that collapses all of a photo's variants to the same group."""
+    m = _WIX_MEDIA_RE.search(u)
+    if m:
+        return "wix:" + m.group(1).lower()
+    return re.sub(r'-\d{2,4}x\d{2,4}(?=\.\w+$)', '', u)
+
+
 def _dedupe_by_base(urls):
-    """WP thumbnail variants (sauce-korma.png, sauce-korma-300x300.png, sauce-korma-150x150.png)
-    are the same product - keep the no-suffix original if present, else the largest crop."""
     groups = {}
     for u in urls:
-        base = re.sub(r'-\d{2,4}x\d{2,4}(?=\.\w+$)', '', u)
-        groups.setdefault(base, []).append(u)
+        groups.setdefault(_dedupe_key(u), []).append(u)
     out = []
     for base, variants in groups.items():
+        if base.startswith("wix:"):
+            # prefer the plain (no /v1/.../ transform) form - it is the untouched original
+            plain = [v for v in variants if "/v1/" not in v]
+            out.append(plain[0] if plain else variants[0])
+            continue
         exact = [v for v in variants if v == base]
         if exact:
             out.append(exact[0])
@@ -676,7 +694,13 @@ _ENRICH_PROMPT = """You are a brand analyst. You are shown a brand's logo and/or
   "colors": ["#hex", ...],   // 4-6 hex colors of THE BRAND's visual identity, sampled from the image(s) shown, ordered most-dominant first. Real brand colors only, no greys unless the brand is genuinely monochrome.
   "voice": "...",            // 2-3 sentences describing the brand voice and personality, written IN THE BRAND'S OWN LANGUAGE (the language of the site text shown)
   "voiceTags": ["...", ...], // 3-5 single-word personality tags, same language
-  "fontVibe": "serif|sans|slab|display|script"  // best guess of the brand's typographic style
+  "fontVibe": "serif|sans|slab|display|script", // best guess of the brand's typographic style
+  "realProductIndexes": [0, 2]  // ONLY if PRODUCT[k] images are shown below: the index numbers k of
+    // every PRODUCT[k] image that is an actual product photo (a real bottle, jar, box, pouch,
+    // garment on a real background). Exclude any PRODUCT[k] that is instead a logo, favicon,
+    // icon, badge, banner, decorative graphic, screenshot, or anything with no real packaging
+    // in frame. Empty list if none qualify. Omit this field entirely if no PRODUCT[k] images
+    // were shown to you.
 }
 Never use em dashes anywhere. JSON only."""
 
@@ -693,17 +717,33 @@ def enrich_brand(brand, html_text):
     if not OPENROUTER_KEY:
         brand.setdefault("warnings", []).append("AI enrichment skipped: no OPENROUTER_API_KEY.")
         return brand, []
-    product_url = _img_url((brand.get("productImages") or [{}])[0]) if brand.get("productImages") else ""
+    products = brand.get("productImages") or []
+    product_url = _img_url(products[0]) if products else ""
     verify_colors = bool(_vision_url(product_url) or _vision_url(brand.get("logo") or ""))
     weak_voice = len((brand.get("voice") or "").strip()) < 25
     weak_tags = not brand.get("voiceTags")
-    if not (verify_colors or weak_voice or weak_tags):
+    check_products = bool(products)  # static parsing can't tell a real bottle from a stray icon
+    if not (verify_colors or weak_voice or weak_tags or check_products):
         return brand, []  # nothing to verify against and text fields are already strong
 
     content = [{"type": "text", "text": _ENRICH_PROMPT}]
     shown = 0
-    # real product photo first - it IS the packaging, the single best color source
-    for u in ([product_url, brand.get("logo")] + (brand.get("imagery") or []))[:3]:
+    # Every candidate product photo, individually labeled, so the model can flag which ones
+    # are not really product photography (Wix/Squarespace sites especially reuse opaque
+    # media hashes for icons and badges that static parsing has no way to tell from a bottle).
+    product_idx_shown = []
+    for i, p in enumerate(products[:4]):
+        v = _vision_url(_img_url(p) or "")
+        if not v:
+            continue
+        data = v if v.startswith("data:") else (_to_data_uri(v) or v)
+        content.append({"type": "text", "text": "PRODUCT[%d]:" % i})
+        content.append({"type": "image_url", "image_url": {"url": data}})
+        product_idx_shown.append(i)
+        shown += 1
+    # logo + lifestyle imagery for color/voice context - product_url is skipped here, it was
+    # already sent above as PRODUCT[0] when present, no need to send the same photo twice
+    for u in ([brand.get("logo")] + (brand.get("imagery") or []))[:3]:
         v = _vision_url(u or "")
         if not v:
             continue
@@ -711,7 +751,7 @@ def enrich_brand(brand, html_text):
         content.append({"type": "text", "text": "BRAND IMAGE:"})
         content.append({"type": "image_url", "image_url": {"url": data}})
         shown += 1
-        if shown >= 2:
+        if shown >= 2 + len(product_idx_shown):
             break
     txt = _visible_text(html_text) if html_text else ""
     if txt:
@@ -754,6 +794,20 @@ def enrich_brand(brand, html_text):
         enriched.append("voiceTags")
     if data.get("fontVibe") and brand.get("fonts", {}).get("display") == "Inter":
         brand["fonts"]["note"] = "style guess: %s - set the exact font manually" % data["fontVibe"]
+    if product_idx_shown and isinstance(data.get("realProductIndexes"), list):
+        # Only drop images we actually SHOWED the model and it explicitly did not confirm -
+        # never touch products[4:] (never shown, unjudged) or run this when the model
+        # ignored the field entirely (data.get(...) missing = no isinstance match = no-op).
+        real = {i for i in data["realProductIndexes"] if isinstance(i, int)}
+        kept = [p for i, p in enumerate(products) if i not in product_idx_shown or i in real]
+        if len(kept) < len(products):
+            dropped = len(products) - len(kept)
+            brand["productImages"] = kept
+            if not kept:
+                brand.setdefault("warnings", []).append(
+                    "Could not confirm any scraped image as a real product photo (looked like logos/icons). Add your own with the + button.")
+            enriched.append("productImages")
+            print("[enrich] dropped %d non-product image(s) (logo/icon/decorative)" % dropped, flush=True)
     return brand, enriched
 
 
