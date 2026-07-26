@@ -129,6 +129,7 @@ def _fetch_jina_html(url, timeout=60, attempts=3):
     The rescue rung for sites that hand datacenter IPs (Railway) an empty shell that
     passes _looks_blocked while carrying none of the real page."""
     html = ""
+    last_err = None
     for attempt in range(attempts):  # first render is sometimes cold/short/rate-limited - retries heal it
         if attempt:
             time.sleep(2 * attempt + 1)
@@ -137,12 +138,13 @@ def _fetch_jina_html(url, timeout=60, attempts=3):
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 html = r.read().decode("utf-8", "ignore")
-        except Exception:
+        except Exception as e:
+            last_err = e
             continue
         if len(html) >= 500:
             break
     if len(html) < 500:
-        raise RuntimeError("jina html reader returned empty")
+        raise last_err or RuntimeError("jina html reader returned empty")
     if _looks_blocked(html):
         raise RuntimeError("jina html reader hit the bot wall")
     return html
