@@ -18,6 +18,12 @@ from services import (UA, OPENROUTER_KEY, IDEAS_MODEL, openrouter_chat,
 
 ALT_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
 
+# r.jina.ai works with no key, but its free-tier rate limit is per-IP - and Railway's
+# outbound IP is shared across many hosted apps, so it gets throttled far more than a
+# residential IP ever would. An optional key (free signup at jina.ai, no card) raises
+# that ceiling a lot; without one we lean on retries instead.
+JINA_KEY = os.environ.get("JINA_API_KEY", "").strip()
+
 
 # ---- fetch ladder ------------------------------------------------------------
 
@@ -87,26 +93,47 @@ def _fetch_browser(url, timeout=60):
     return html
 
 
-def _fetch_jina(url, timeout=45):
+def _jina_headers(extra=None):
+    h = {"User-Agent": UA}
+    if JINA_KEY:
+        h["Authorization"] = "Bearer " + JINA_KEY
+    if extra:
+        h.update(extra)
+    return h
+
+
+def _fetch_jina(url, timeout=45, attempts=3):
     """Reader fallback that works from datacenter IPs (Railway). Returns markdown-ish text,
-    good enough for name/voice/language enrichment; images come from og tags it preserves."""
-    txt = _fetch("https://r.jina.ai/" + url, timeout=timeout)
-    if len(txt) < 200:
-        raise RuntimeError("jina reader returned empty")
-    return txt
+    good enough for name/voice/language enrichment; images come from og tags it preserves.
+    Retries with backoff - a free-tier rate limit or a cold render looks like any other
+    transient failure, and one retry usually clears it."""
+    last_err = None
+    for attempt in range(attempts):
+        if attempt:
+            time.sleep(2 * attempt)
+        try:
+            req = urllib.request.Request("https://r.jina.ai/" + url, headers=_jina_headers())
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                txt = r.read().decode("utf-8", "ignore")
+            if len(txt) >= 200:
+                return txt
+            last_err = RuntimeError("jina reader returned empty")
+        except Exception as e:
+            last_err = e
+    raise last_err or RuntimeError("jina reader returned empty")
 
 
-def _fetch_jina_html(url, timeout=60):
+def _fetch_jina_html(url, timeout=60, attempts=3):
     """Reader fallback in HTML mode - Jina renders the page from its own IPs (which brand
     sites don't wall off) and returns the full rendered HTML, images and colors included.
     The rescue rung for sites that hand datacenter IPs (Railway) an empty shell that
     passes _looks_blocked while carrying none of the real page."""
     html = ""
-    for attempt in range(2):  # first render is sometimes cold/short - one retry heals it
+    for attempt in range(attempts):  # first render is sometimes cold/short/rate-limited - retries heal it
         if attempt:
-            time.sleep(3)
+            time.sleep(2 * attempt + 1)
         req = urllib.request.Request("https://r.jina.ai/" + url,
-            headers={"User-Agent": UA, "X-Return-Format": "html"})
+            headers=_jina_headers({"X-Return-Format": "html"}))
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 html = r.read().decode("utf-8", "ignore")
@@ -136,6 +163,10 @@ def _fetch_any(url, timeout=30):
             pass
     try:
         return _fetch_browser(url), "html"  # raises on empty or blocked
+    except Exception:
+        pass
+    try:
+        return _fetch_jina_html(url), "html"  # full rendered page - images, colors, everything
     except Exception:
         pass
     try:

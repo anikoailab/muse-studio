@@ -214,6 +214,7 @@ class TestBlockDetection(unittest.TestCase):
         with mock.patch.object(scraper, "_fetch",
                                side_effect=lambda url, timeout=30, ua=None: self.CF_403), \
              mock.patch.object(scraper, "_fetch_browser", side_effect=RuntimeError("bot wall")), \
+             mock.patch.object(scraper, "_fetch_jina_html", side_effect=RuntimeError("bot wall")), \
              mock.patch.object(scraper, "_fetch_jina", return_value="Title: Super Patch\n\nReal content here"):
             content, kind = scraper._fetch_any("https://walled.example")
         self.assertEqual(kind, "text")
@@ -223,6 +224,7 @@ class TestBlockDetection(unittest.TestCase):
         with mock.patch.object(scraper, "_fetch",
                                side_effect=lambda url, timeout=30, ua=None: self.CF_403), \
              mock.patch.object(scraper, "_fetch_browser", side_effect=RuntimeError("bot wall")), \
+             mock.patch.object(scraper, "_fetch_jina_html", side_effect=RuntimeError("bot wall")), \
              mock.patch.object(scraper, "_fetch_jina", return_value=self.READER_BLOCKED):
             with self.assertRaises(RuntimeError) as ctx:
                 scraper._fetch_any("https://walled.example")
