@@ -12,35 +12,41 @@
 <base href="/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-/* ============ MUSE THEME - the one block to restyle for a client (Tailor stage) ============ */
+/* ============ MUSE THEME - the one block to restyle for a client (Tailor stage) ============
+   Matches landing.html's coral system - same hex values, same light/dark pairing.
+   Variable NAMES stayed --gold/--gold-deep/--violet on purpose (this file's whole point is
+   being the one block a future re-theme touches; renaming 39 var() call sites for a label
+   that's invisible to users would be churn, not a fix - only the VALUES needed to change). */
 :root{
-  --paper:#faf7f2;        /* warm ivory */
-  --paper-2:#f3eee5;      /* panel fill */
-  --ink:#1b1812;          /* near-black text */
-  --ink-soft:#6d6558;
-  --line:#e2dbcd;
-  --gold:#c19a4b;         /* the single accent */
-  --gold-deep:#a37f35;
-  --violet:#6c5b8f;       /* quiet secondary, used sparingly */
-  --card:#fffdf9;
-  --shadow:0 1px 2px rgba(27,24,18,.06),0 8px 28px rgba(27,24,18,.08);
+  --paper:#f8f5f4;
+  --paper-2:#efe9e7;      /* panel fill */
+  --ink:#17100e;          /* near-black text */
+  --ink-soft:#6a5b57;
+  --line:#e5dcd9;
+  --gold:#d61e46;         /* the single accent - coral, was gold */
+  --gold-deep:#cf2445;
+  --gold-ink:#ffffff;     /* text/icons sitting ON the accent - flips with theme, see dark block */
+  --violet:#6c5b8f;       /* quiet secondary for AI-provenance badges, kept distinct from the accent on purpose */
+  --card:#ffffff;
+  --shadow:0 1px 2px rgba(23,16,14,.06),0 8px 28px rgba(23,16,14,.08);
   --radius:14px;
-  --font-display:"Fraunces",Georgia,serif;
-  --font-body:"Inter",-apple-system,system-ui,sans-serif;
+  --font-display:"Bricolage Grotesque",-apple-system,system-ui,sans-serif;
+  --font-body:"Instrument Sans",-apple-system,system-ui,sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,monospace;
 }
 [data-theme="dark"]{
-  --paper:#14121a;
-  --paper-2:#1c1924;
-  --ink:#efe9dd;
-  --ink-soft:#9a917f;
-  --line:#2c2836;
-  --gold:#d4b06a;
-  --gold-deep:#c19a4b;
+  --paper:#100b0b;
+  --paper-2:#221718;
+  --ink:#f5efee;
+  --ink-soft:#a8938f;
+  --line:#2c1f20;
+  --gold:#ff4d6a;
+  --gold-deep:#ff8095;
+  --gold-ink:#1a0508;     /* ff4d6a is too bright for white text at a strong contrast - dark ink instead */
   --violet:#9d8cc2;
-  --card:#1f1b28;
+  --card:#1a1213;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.45);
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -59,8 +65,8 @@ a:hover{text-decoration:underline}
 /* ---------- top bar ---------- */
 .topbar{display:flex;align-items:center;gap:14px;padding:14px 26px;border-bottom:1px solid var(--line);
   background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);position:sticky;top:0;z-index:40}
-.wordmark{font-family:var(--font-display);font-size:21px;font-weight:700;letter-spacing:.01em}
-.wordmark em{font-style:italic;font-weight:300;color:var(--gold-deep)}
+.wordmark{font-family:var(--font-display);font-size:21px;font-weight:800;letter-spacing:-.035em}
+.wordmark b{font-weight:800;color:var(--gold-deep)}
 .byline{font-size:11px;color:var(--ink-soft);margin-top:1px}
 .api-pill{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-soft);
   border:1px solid var(--line);border-radius:99px;padding:5px 12px;background:var(--card)}
@@ -87,7 +93,7 @@ a:hover{text-decoration:underline}
   transition:transform .12s,opacity .15s;white-space:nowrap}
 .btn:hover{transform:translateY(-1px)}
 .btn:disabled{opacity:.45;cursor:default;transform:none}
-.btn.gold{background:var(--gold);color:#fff}
+.btn.gold{background:var(--gold);color:var(--gold-ink)}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.ghost:hover{border-color:var(--gold)}
 .scrape-note{font-size:11.5px;color:var(--ink-soft);margin-top:8px;line-height:1.5}
@@ -147,7 +153,7 @@ a:hover{text-decoration:underline}
 /* ---------- main canvas ---------- */
 .empty{max-width:440px;margin:90px auto;text-align:center;color:var(--ink-soft)}
 .empty h2{font-size:26px;color:var(--ink);margin-bottom:10px}
-.empty .muse-mark{font-family:var(--font-display);font-style:italic;font-size:52px;color:var(--gold);opacity:.5;margin-bottom:14px}
+.empty .muse-mark{font-family:var(--font-display);font-weight:800;font-size:52px;color:var(--gold);opacity:.5;margin-bottom:14px}
 .loadbar{height:3px;background:var(--line);border-radius:99px;overflow:hidden;margin:14px 0;display:none}
 .loadbar.show{display:block}
 .loadbar-fill{height:100%;width:0;background:var(--gold);transition:width .25s ease}
@@ -159,7 +165,7 @@ a:hover{text-decoration:underline}
 .row{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .row.scheduled{border-color:color-mix(in srgb,#3d9a5f 45%,var(--line))}
 .row-top{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
-.row-num{font-family:var(--font-display);font-style:italic;font-size:22px;color:var(--gold);flex:none}
+.row-num{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--gold);flex:none}
 .row-tone{font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--violet)}
 .row-title{font-family:var(--font-display);font-size:17px;font-weight:600}
 .row-idea{font-size:13px;color:var(--ink-soft);margin:4px 0 10px;line-height:1.55;max-width:70ch}
@@ -176,7 +182,7 @@ a:hover{text-decoration:underline}
 .role-chip{position:absolute;top:6px;left:6px;font-family:var(--font-mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
   background:rgba(20,18,26,.72);color:#fff;padding:2px 7px;border-radius:5px;z-index:2}
 .slide-n{position:absolute;bottom:6px;right:6px;font-family:var(--font-mono);font-size:9px;font-weight:700;
-  background:var(--gold);color:#fff;padding:1px 6px;border-radius:5px;z-index:2}
+  background:var(--gold);color:var(--gold-ink);padding:1px 6px;border-radius:5px;z-index:2}
 .row-actions{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
 .slide-count{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft)}
 .slide-count input{width:52px;text-align:center;padding:6px}
@@ -255,7 +261,7 @@ a:hover{text-decoration:underline}
 
 <div class="topbar">
   <div>
-    <div class="wordmark">Muse <em>Studio</em></div>
+    <div class="wordmark">muse <b>studio</b></div>
     <div class="byline">brand in, scheduled posts out</div>
   </div>
   <div class="api-pill"><span class="api-dot off" id="apiDot"></span><span id="apiLabel">checking</span></div>
@@ -732,7 +738,7 @@ function drawSwatches(){
   $("#swatches").querySelectorAll(".del").forEach(d=>{
     d.onclick=e=>{e.stopPropagation();brand.colors.splice(+d.dataset.i,1);markManual("colors");drawBrand();persistBrand();};
   });
-  $("#swAdd").onclick=()=>{brand.colors.push("#c19a4b");markManual("colors");drawBrand();persistBrand();};
+  $("#swAdd").onclick=()=>{brand.colors.push("#8a8a8a");markManual("colors");drawBrand();persistBrand();};
 }
 function markManual(field){brand.sources=brand.sources||{};brand.sources[field]="manual";}
 function drawImages(){
@@ -963,7 +969,7 @@ function drawRows(){
 
 /* ================= render prompt (proven, ported) ================= */
 function slidePrompt(post,role,i,n){
-  const C=brand.colors||[],pal=C.slice(0,5).join(", "),c1=C[0]||"#c19a4b",c2=C[1]||"#1b1812";
+  const C=brand.colors||[],pal=C.slice(0,5).join(", "),c1=C[0]||"#8a8a8a",c2=C[1]||"#1a1a1a";
   const font=(brand.fonts&&brand.fonts.display)||"a clean modern sans-serif";
   const dir=state.direction||"on-brand";
   const concept=(post.idea||"").slice(0,160);
