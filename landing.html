@@ -5,7 +5,7 @@
 <meta property="og:title" content="Muse Studio - your website, turned into posts">
 <meta property="og:description" content="Send your website, get finished posts in your own colors with your own products, captions included.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="/landing-images/selected/post2_slide2_lineup-2.png">
+<meta property="og:image" content="/landing-images/selected/ribas-mesa.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
@@ -15,12 +15,12 @@
    cream/brass palette this page used to wear), one radius scale. The renders
    in the cloud carry all the colour; the brand stays out of their way. */
 :root{
-  --bg:#f3f3f1; --surface:#ffffff; --surface-2:#ececea;
-  --ink:#101014; --muted:#5e5f68; --line:#dededa;
-  --accent:#2b3fff; --accent-ink:#ffffff; --accent-text:#2b3fff; --accent-soft:rgba(43,63,255,.07);
+  --bg:#f8f5f4; --surface:#ffffff; --surface-2:#efe9e7;
+  --ink:#17100e; --muted:#6a5b57; --line:#e5dcd9;
+  --accent:#d61e46; --accent-ink:#ffffff; --accent-text:#cf2445; --accent-soft:rgba(214,30,70,.09);
   /* text and chips that sit ON the accent. Tokens, not hardcoded white, so a light
      accent (a lime, a butter yellow) can flip them to dark ink and stay readable. */
-  --accent-ink-soft:rgba(255,255,255,.84); --accent-chip:rgba(255,255,255,.18);
+  --accent-ink-soft:rgba(255,255,255,.86); --accent-chip:rgba(255,255,255,.20);
   --shadow:0 16px 40px rgba(16,16,20,.10);
   --shadow-lift:0 26px 60px rgba(16,16,20,.16);
   --r:18px; --r-sm:12px;             /* cards 18, inputs 12, buttons pill */
@@ -29,10 +29,10 @@
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --bg:#0c0c0f; --surface:#15151b; --surface-2:#1c1c23;
-    --ink:#f2f2f0; --muted:#9c9caa; --line:#26262e;
-    --accent:#4b5cff; --accent-ink:#ffffff; --accent-text:#96a2ff; --accent-soft:rgba(75,92,255,.14);
-    --accent-ink-soft:rgba(255,255,255,.84); --accent-chip:rgba(255,255,255,.18);
+    --bg:#100b0b; --surface:#1a1213; --surface-2:#221718;
+    --ink:#f5efee; --muted:#a8938f; --line:#2c1f20;
+    --accent:#ff4d6a; --accent-ink:#1a0508; --accent-text:#ff8095; --accent-soft:rgba(255,77,106,.14);
+    --accent-ink-soft:rgba(26,5,8,.74); --accent-chip:rgba(26,5,8,.14);
     --shadow:0 16px 40px rgba(0,0,0,.5);
     --shadow-lift:0 26px 60px rgba(0,0,0,.62);
   }
@@ -320,7 +320,7 @@ h1 b{color:var(--accent-text);font-weight:800}
 <script>
 /* ---------- images: the live render library IS the show; placeholders only if empty ---------- */
 function placeholder(i){
-  const P=[["#2b3fff","#ffffff"],["#101014","#f3f3f1"],["#4b5cff","#ffffff"],["#1c1c23","#96a2ff"]];
+  const P=[["#d61e46","#ffffff"],["#17100e","#f8f5f4"],["#ff4d6a","#1a0508"],["#221718","#ff8095"]];
   const W=["HOOK","WHY","SHOP","MUSE"];
   const [bg,fg]=P[i%P.length];
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="${bg}"/><text x="55" y="560" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="118" fill="${fg}">${W[i%W.length]}</text><rect x="60" y="880" width="120" height="7" fill="${fg}" opacity=".7"/></svg>`;
