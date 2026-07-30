@@ -206,16 +206,63 @@ def _all_images(html, origin):
     return out
 
 
-def _find_logo(html, origin):
-    """Find the brand's actual logo file (favicon excluded - too small/generic).
+def _brand_tokens(origin, name=""):
+    """Words that identify THIS brand, for telling its own assets apart from other companies'.
+    Taken from the domain label plus the site name (e.g. washtower.ch -> {'washtower'})."""
+    host = urlparse(origin).netloc.lower().replace("www.", "")
+    toks = set()
+    label = host.split(".")[0]
+    if len(label) > 3:
+        toks.add(label)
+        # compound domains (washtower -> wash, tower) so 'wash-tower-logo.png' still matches
+        toks.update(w for w in re.split(r"[-_]", label) if len(w) > 3)
+    for w in re.split(r"[^a-z0-9]+", (name or "").lower()):
+        if len(w) > 3:
+            toks.add(w)
+    return toks
+
+
+# Retailer / dealer / certification marks. A brand site's "where to buy", "our partners" and
+# press strips are full of OTHER companies' logos, and picking one of those poisons everything
+# downstream - it becomes the render reference AND the photo the AI samples the palette from.
+_FOREIGN_LOGO = ("partner", "dealer", "haendler", "handler", "reseller", "retailer", "stockist",
+        "client", "kunde", "press", "presse", "award", "certif", "member", "sponsor",
+        "trustpilot", "trusted", "kiyoh", "review", "payment", "paypal", "klarna",
+        "mastercard", "visa", "amex", "maestro", "twint", "postfinance")
+
+
+def _find_logo(html, origin, name=""):
+    """Find the brand's OWN logo file (favicon excluded - too small/generic).
     Kept separate from productImages so it can be handed to the render model as a
     REFERENCE IMAGE - that's what lets a slide carry the real mark instead of a guess."""
-    cands = [u for u in _all_images(html, origin)
-             if "logo" in u.lower() and "favicon" not in u.lower()]
+    imgs = _all_images(html, origin)
+    # logos are very often SVG, which _all_images deliberately ignores (it feeds product/imagery
+    # panels, where SVG means icon). Scan for them here only, where a vector mark is the ideal case.
+    svgs, seen = [], set(imgs)
+    for attr in ("src", "data-src", "href"):
+        for u in re.findall(r'%s=["\']([^"\']+?\.svg[^"\']*)["\']' % attr, html, re.I):
+            u = urllib.parse.urljoin(origin, u.strip()).split("?")[0]
+            if "logo" in u.lower() and u not in seen:
+                seen.add(u)
+                svgs.append(u)
+    cands = [u for u in svgs + imgs if "logo" in u.lower() and "favicon" not in u.lower()]
     if not cands:
         return ""
-    cands.sort(key=lambda u: (bool(re.search(r'-\d{2,4}x\d{2,4}\.', u)), len(u)))
-    return cands[0]
+    toks = _brand_tokens(origin, name)
+
+    def rank(u):
+        low = u.lower()
+        fname = low.rsplit("/", 1)[-1]
+        # 1. the brand's own name in the filename beats everything
+        own = 0 if any(t in fname for t in toks) else 1
+        # 2. anything that reads as another company's mark sinks
+        foreign = 1 if any(k in low for k in _FOREIGN_LOGO) else 0
+        # 3. document order - the header logo is emitted long before the dealer wall
+        pos = html.find(u.rsplit("/", 1)[-1])
+        return (own, foreign, pos if pos >= 0 else 10**9,
+                bool(re.search(r'-\d{2,4}x\d{2,4}\.', u)), len(u))
+
+    return sorted(cands, key=rank)[0]
 
 
 _PRODUCT_JUNK = ("icon", "logo", "sprite", "favicon", "placeholder", "badge", "flag", "payment",
@@ -223,7 +270,17 @@ _PRODUCT_JUNK = ("icon", "logo", "sprite", "favicon", "placeholder", "badge", "f
         "partnership", "partner", "cgb",
         # Nutrition Facts Table crops - a real per-item photo lives on the same product page,
         # these are just the label, and a wrong reference image for the render model.
-        "nutritional-", "nutrition-facts", "nft_", "nft-")
+        "nutritional-", "nutrition-facts", "nft_", "nft-",
+        # Checkout trust strip: payment-method and review-platform marks. European shops in
+        # particular render these as ordinary <img> uploads sitting in the same folder as real
+        # photography, so nothing but the filename tells them apart from a packshot.
+        "paypal", "klarna", "mastercard", "maestro", "visa", "amex", "american-express",
+        "apple-pay", "applepay", "apple_pay", "google-pay", "googlepay", "twint",
+        "postfinance", "bancontact", "sofort", "ideal-", "vorkasse", "bezahl", "rechnung",
+        "kreditkarte", "credit-card", "creditcard", "stripe", "trustpilot", "trusted-shops",
+        "trustmark", "kiyoh", "klantenvertellen",
+        # carrier logos in the shipping strip
+        "dhl", "dpd-", "-dpd", "gls-", "versandkosten")
 # Theme decoration (dividers, background textures, spike graphics) and generic stock photos or
 # lifestyle/recipe shots are NOT the product itself - handing these to the render model as "the
 # real product, don't invent a different one" produces a confidently wrong bottle every time.
@@ -253,6 +310,13 @@ _SHOP_LINK_RE = re.compile(r'href=["\']([^"\']+)["\']', re.I)
 
 _HUB_RE = re.compile(r'/(?:shop|products?|collections?)/?$', re.I)
 
+# Transactional pages, not catalogue. "/shop" is a SUBSTRING of "/checkout/shopping-cart/", so
+# the keyword match happily follows an empty cart and reports whatever is left on the page -
+# usually the footer's dealer-logo wall - as the brand's products.
+_NOT_CATALOG_RE = re.compile(
+    r'/(?:cart|shopping[-_]?cart|checkout|basket|warenkorb|panier|account|konto|login|signin|'
+    r'sign[-_]?in|register|wishlist|merkliste|compare|search|suche)(?:[/?]|$)', re.I)
+
 
 def _shop_links(html, origin):
     """Nav links to a shop/products/collections listing page - where real per-item bottle
@@ -266,6 +330,8 @@ def _shop_links(html, origin):
     for h in _SHOP_LINK_RE.findall(html):
         low = h.lower()
         if not any(k in low for k in ("/shop", "/product", "/collections", "/categories-product")):
+            continue
+        if _NOT_CATALOG_RE.search(low):
             continue
         u = urllib.parse.urljoin(origin + "/", h).split("#")[0]
         key = u.rstrip("/")
@@ -294,6 +360,8 @@ def _category_links(html, origin, exclude_url):
         if "/fr/" in low or "/feed" in low:
             continue
         if not any(k in low for k in ("categor", "/collections", "/shop")):
+            continue
+        if _NOT_CATALOG_RE.search(low):
             continue
         u = urllib.parse.urljoin(origin + "/", h).split("#")[0]
         key = u.rstrip("/")
@@ -511,10 +579,52 @@ JUNK_HEX = {"#007bff", "#0d6efd", "#0a58ca", "#6610f2", "#0dcaf0",   # Bootstrap
             "#357ebd", "#3071a9", "#2a6496", "#c09853", "#b94a48", "#468847", "#3a87ad",  # Bootstrap 3 borders/text
             "#abb8c3", "#f78da7", "#cf2e2e", "#ff6900", "#fcb900", "#7bdcb5",  # WordPress editor defaults
             "#9b51e0", "#0693e3", "#8ed1fc", "#00d084", "#eb144c", "#f47e60",  # more WP editor defaults
-            "#5bbad5", "#da532c", "#2b5797", "#00aba9"}  # Safari mask-icon + msapplication tile defaults
+            "#5bbad5", "#da532c", "#2b5797", "#00aba9",   # Safari mask-icon + msapplication tile defaults
+            # Third-party widget colors: Trustpilot stars and card-scheme marks, pasted onto
+            # thousands of shops and saying nothing about the brand. Deliberately limited to the
+            # DISTINCTIVE ones - a generic navy or green gets excluded here only if it is also a
+            # real brand's primary somewhere, so those stay in and are handled structurally
+            # instead (inline <svg> stripping below, plus declared CSS brand tokens).
+            "#00b67a", "#00b67c",                          # Trustpilot green
+            "#003087", "#009cde", "#253b80", "#179bd7",    # PayPal
+            "#ff5f00", "#f79e1b",                          # Mastercard
+            "#1a1f71",                                     # Visa
+            "#ffb3c7"}                                     # Klarna
+
+
+# CSS custom properties that name a BRAND role. When a site declares these it is telling us its
+# palette outright, which beats counting hex frequency - the most-repeated color on a shop page is
+# usually a checkout widget, not the brand.
+_BRAND_VAR_RE = re.compile(
+    r'--(?:[a-z0-9-]*-)?(?:color-)?(primary|secondary|tertiary|accent|brand|theme)'
+    r'(?:-(?:dark|darken|light|lighten|\d{2,3}))?\s*:\s*(#[0-9a-fA-F]{3,6})\b', re.I)
+# ...and the ones that name a UI STATE or a neutral. Success green / danger red / grey ramps are
+# framework semantics every site shares; they are not what the brand looks like.
+_UI_VAR_RE = re.compile(r'(success|danger|error|warning|info|checkout|grey|gray|neutral|'
+                        r'muted|disabled|border|shadow|overlay|placeholder)', re.I)
+
+
+def _brand_vars(html):
+    """Colors the site declares as its own brand tokens, in declaration order."""
+    out = []
+    for m in _BRAND_VAR_RE.finditer(html):
+        full = m.group(0)
+        if _UI_VAR_RE.search(full.split(":")[0]):
+            continue
+        c = m.group(2).lower()
+        if len(c) == 4:  # #abc -> #aabbcc
+            c = "#" + "".join(ch * 2 for ch in c[1:])
+        if len(c) == 7 and c not in out:
+            out.append(c)
+    return out
 
 
 def _colors(html):
+    # Inline <svg> is where payment-method and review-widget marks keep their fills. Those are
+    # the most-repeated hexes on a checkout-heavy page, so counting them hands back Trustpilot
+    # green and PayPal blue as "the brand". Strip the vectors, keep the stylesheets.
+    html = re.sub(r"(?is)<svg[^>]*>.*?</svg>", " ", html)
+    declared = _brand_vars(html)
     hexes = re.findall(r"#([0-9a-fA-F]{6})\b", html)
     def vivid(h):
         r, g, b = int(h[:2], 16), int(h[2:4], 16), int(h[4:], 16)
@@ -526,11 +636,17 @@ def _colors(html):
             return False
         return True
     cnt = Counter("#" + h.lower() for h in hexes if vivid(h))
-    cols = [c for c, _ in cnt.most_common(6)]
+    counted = [c for c, _ in cnt.most_common(6)]
+    # Declared brand tokens lead; frequency only fills the tail. A site that names its own
+    # --color-primary has answered the question, and no amount of repeated checkout chrome
+    # should outrank it.
+    cols = [c for c in declared if vivid(c[1:])]
+    cols += [c for c in counted if c not in cols]
     tc = (_meta(html, "theme-color") or "").lower()
-    # theme-color joins only if it is a real brand colour (vivid, not a framework default)
+    # theme-color joins only if it is a real brand colour (vivid, not a framework default), and
+    # never ahead of a token the site explicitly declared as its primary
     if re.match(r"^#[0-9a-f]{6}$", tc) and tc not in cols and vivid(tc[1:]):
-        cols.insert(0, tc)
+        cols.insert(len(declared), tc)
     # always carry a dark anchor for text
     if cols and not any(int(c[1:3],16)+int(c[3:5],16)+int(c[5:7],16) < 180 for c in cols):
         cols.append("#161214")
@@ -691,7 +807,7 @@ def scrape_static(url, _html=None):
     css = _linked_css(html, origin)
     html_css = html + "\n" + css
     font = _fonts(html_css)
-    logo = _find_logo(html, origin)
+    logo = _find_logo(html, origin, name)
     # Imagery is the lifestyle/mood board and stays SEPARATE from product packshots - padding it
     # with products (the old behaviour) is what duplicated bottles into the imagery panel and
     # mixed recipe shots and packaging together. Products live in productImages; if a site has
