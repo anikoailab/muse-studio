@@ -7,7 +7,7 @@ Pass 2: AI enrichment (one small OpenRouter vision call) - fills the gaps Pass 1
 A scrape degrades gracefully - it returns warnings, it does not hard-fail because one
 rung of the fetch ladder or the enrichment call broke.
 """
-import os, re, json, time, shutil, subprocess, urllib.request, urllib.parse, urllib.error
+import os, re, gzip, zlib, json, time, shutil, subprocess, urllib.request, urllib.parse, urllib.error
 from html import unescape
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -46,6 +46,14 @@ _BLOCK_MARKERS = ("cf-browser-verification", "cf_chl_opt", "challenge-platform",
                   "enable javascript and cookies to continue", "ddos protection by")
 
 
+def _looks_like_html(content):
+    """A rung that hands back bytes with no markup in them has FAILED, however big it is.
+    Without this, undecodable/compressed/binary responses sail through _looks_blocked
+    (none of its markers appear in noise) and get parsed as the brand's website."""
+    head = content[:20000].lower()
+    return any(t in head for t in ("<html", "<body", "<head", "<div", "<meta", "<a "))
+
+
 def _looks_blocked(content):
     low = content[:8000].lower()
     t = re.search(r"<title[^>]*>(.*?)</title>", low, re.S)
@@ -55,10 +63,47 @@ def _looks_blocked(content):
     return any(m in low for m in _BLOCK_MARKERS)
 
 
+def _decompress(data, encoding=""):
+    """Undo Content-Encoding. urllib does NOT do this for us, and plenty of sites (any
+    WordPress behind a CDN, most Wix/Shopify fronts) answer with gzip even when no
+    Accept-Encoding was sent. Left compressed, the bytes decode to 35KB of noise that
+    contains no <html>, no images, no logo - and the scrape silently produced an empty
+    brand while every fetch-ladder rung reported success. That is the daigomallorca.com
+    bug: the real logo was never seen, so the render model invented one."""
+    enc = (encoding or "").lower()
+    if enc in ("gzip", "x-gzip") or data[:2] == b"\x1f\x8b":     # magic bytes: catches
+        try:                                                     # servers that gzip without
+            return gzip.decompress(data)                         # declaring it
+        except Exception:
+            pass
+    if enc == "deflate":
+        for wbits in (-zlib.MAX_WBITS, zlib.MAX_WBITS):          # raw and zlib-wrapped
+            try:
+                return zlib.decompress(data, wbits)
+            except Exception:
+                pass
+    if enc == "br":
+        try:
+            import brotli
+            return brotli.decompress(data)
+        except Exception:
+            pass
+    return data
+
+
 def _fetch(url, timeout=30, ua=UA):
-    req = urllib.request.Request(url, headers={"User-Agent": ua})
+    # brotli is only requested when the decoder is installed - asking for what we cannot
+    # unpack is how a "successful" fetch turns into garbage.
+    accept = "gzip, deflate"
+    try:
+        import brotli  # noqa: F401
+        accept += ", br"
+    except Exception:
+        pass
+    req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept-Encoding": accept})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read().decode("utf-8", "ignore")
+        raw = _decompress(r.read(), r.headers.get("Content-Encoding", ""))
+    return raw.decode("utf-8", "ignore")
 
 
 def _chrome_exe():
@@ -159,9 +204,13 @@ def _fetch_any(url, timeout=30):
     for ua in (UA, ALT_UA):
         try:
             html = _fetch(url, timeout, ua=ua)
-            if not _looks_blocked(html):
+            if not _looks_like_html(html):
+                print("[fetch_any] plain fetch (ua=%s) returned non-HTML (%d bytes) - next rung"
+                      % (ua[:20], len(html)), flush=True)
+            elif not _looks_blocked(html):
                 return html, "html"
-            print("[fetch_any] plain fetch (ua=%s) blocked" % ua[:20], flush=True)
+            else:
+                print("[fetch_any] plain fetch (ua=%s) blocked" % ua[:20], flush=True)
         except Exception as e:
             print("[fetch_any] plain fetch (ua=%s) failed: %r" % (ua[:20], e), flush=True)
     try:
@@ -231,6 +280,31 @@ _FOREIGN_LOGO = ("partner", "dealer", "haendler", "handler", "reseller", "retail
         "mastercard", "visa", "amex", "maestro", "twint", "postfinance")
 
 
+# WordPress/Shopify/Wix all publish resized copies next to the original as
+# name-WIDTHxHEIGHT.ext. The original is the same URL with that suffix removed.
+_SIZED_VARIANT = re.compile(r"-\d{2,4}x\d{2,4}(?=\.[a-z]{3,4}$)", re.I)
+
+
+def _full_size_logo(url, cands=()):
+    """Given a logo URL, return the full-size original when one exists.
+    Cropped thumbnails are the single worst thing to hand a render model: it faithfully
+    reproduces the crop, so a sliced wordmark ships as if it were the brand's real mark."""
+    if not _SIZED_VARIANT.search(url.rsplit("/", 1)[-1]):
+        return url
+    full = _SIZED_VARIANT.sub("", url)
+    if full in cands:          # the page already links the original - no request needed
+        return full
+    try:                       # otherwise confirm it exists before swapping
+        req = urllib.request.Request(full, headers={"User-Agent": UA})
+        req.get_method = lambda: "HEAD"
+        with urllib.request.urlopen(req, timeout=10) as r:
+            if 200 <= r.status < 300:
+                return full
+    except Exception as e:
+        print("[logo] no full-size original for %s (%s)" % (url, e), flush=True)
+    return url
+
+
 def _find_logo(html, origin, name=""):
     """Find the brand's OWN logo file (favicon excluded - too small/generic).
     Kept separate from productImages so it can be handed to the render model as a
@@ -257,12 +331,18 @@ def _find_logo(html, origin, name=""):
         own = 0 if any(t in fname for t in toks) else 1
         # 2. anything that reads as another company's mark sinks
         foreign = 1 if any(k in low for k in _FOREIGN_LOGO) else 0
-        # 3. document order - the header logo is emitted long before the dealer wall
+        # 3. a resized variant (logo-150x110.png) is NEVER the one to send to the render
+        #    model. WordPress crops these HARD, so a 300x110 wordmark becomes a 150x110
+        #    slice showing three letters. That is how D'AIGO reached a slide as "AIGO".
+        #    This must outrank document order: WP emits the thumbnail in the header,
+        #    long before the full-size file appears anywhere on the page.
+        sized = 1 if _SIZED_VARIANT.search(fname) else 0
+        # 4. document order - the header logo is emitted long before the dealer wall
         pos = html.find(u.rsplit("/", 1)[-1])
-        return (own, foreign, pos if pos >= 0 else 10**9,
-                bool(re.search(r'-\d{2,4}x\d{2,4}\.', u)), len(u))
+        return (own, foreign, sized, pos if pos >= 0 else 10**9, len(u))
 
-    return sorted(cands, key=rank)[0]
+    best = sorted(cands, key=rank)[0]
+    return _full_size_logo(best, cands)
 
 
 _PRODUCT_JUNK = ("icon", "logo", "sprite", "favicon", "placeholder", "badge", "flag", "payment",

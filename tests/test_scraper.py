@@ -1,4 +1,4 @@
-import json, os, sys, unittest
+import gzip, json, os, sys, unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -229,6 +229,77 @@ class TestBlockDetection(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 scraper._fetch_any("https://walled.example")
         self.assertIn("bot protection", str(ctx.exception))
+
+
+class TestCompressedResponses(unittest.TestCase):
+    """Regression for daigomallorca.com (2026-08-04): the site answers gzip even when no
+    Accept-Encoding is sent. urllib does not decompress, so the scraper read 35KB of
+    binary noise, found no <html>, no logo, no colors, no products - and every rung of
+    the ladder reported success. The brand came out empty and the render model invented
+    a logo. Two guards: decompress, and treat non-markup as a FAILED rung."""
+    PAGE = ('<html><head><title>D Aigo</title></head><body><div>'
+            '<img src="/logo.png"></div></body></html>')
+
+    def _fake_response(self, body, headers):
+        r = mock.MagicMock()
+        r.read.return_value = body
+        r.headers.get.side_effect = lambda k, d="": headers.get(k, d)
+        r.__enter__.return_value = r
+        return r
+
+    def test_gzip_body_is_decompressed(self):
+        body = gzip.compress(self.PAGE.encode())
+        with mock.patch.object(scraper.urllib.request, "urlopen",
+                               return_value=self._fake_response(body, {"Content-Encoding": "gzip"})):
+            self.assertEqual(scraper._fetch("https://x.example"), self.PAGE)
+
+    def test_undeclared_gzip_caught_by_magic_bytes(self):
+        # Some CDNs gzip the body but omit the header - the magic bytes are the only signal.
+        body = gzip.compress(self.PAGE.encode())
+        with mock.patch.object(scraper.urllib.request, "urlopen",
+                               return_value=self._fake_response(body, {})):
+            self.assertEqual(scraper._fetch("https://x.example"), self.PAGE)
+
+    def test_non_html_is_not_treated_as_a_page(self):
+        noise = gzip.compress(self.PAGE.encode()).decode("utf-8", "ignore")
+        self.assertFalse(scraper._looks_like_html(noise))
+        self.assertTrue(scraper._looks_like_html(self.PAGE))
+
+    def test_ladder_escalates_past_non_html_rung(self):
+        noise = gzip.compress((self.PAGE * 40).encode()).decode("utf-8", "ignore")
+        with mock.patch.object(scraper, "_fetch",
+                               side_effect=lambda url, timeout=30, ua=None: noise), \
+             mock.patch.object(scraper, "_fetch_browser", return_value=self.PAGE):
+            content, kind = scraper._fetch_any("https://gz.example")
+        self.assertEqual((content, kind), (self.PAGE, "html"))
+
+
+class TestLogoFullSize(unittest.TestCase):
+    """Regression for D'Aigo (2026-08-04): the scraper picked WordPress's hard-cropped
+    150x110 thumbnail of a 300x110 wordmark. That crop literally reads 'AIG', so the
+    render model reproduced it faithfully and the slide shipped saying 'AIGO'."""
+    WP = ('<html><body><a class="custom-logo-link">'
+          '<img src="/wp-content/uploads/2022/08/daigo_logo-150x110.png">'
+          '</a><footer><img src="/wp-content/uploads/2022/08/daigo_logo.png">'
+          '</footer></body></html>')
+
+    def test_full_size_beats_earlier_thumbnail(self):
+        logo = scraper._find_logo(self.WP, "https://daigo.example", "Daigo")
+        self.assertTrue(logo.endswith("daigo_logo.png"), logo)
+
+    def test_thumbnail_only_page_recovers_the_original(self):
+        html = ('<html><body><img src="/uploads/daigo_logo-150x110.png"></body></html>')
+        with mock.patch.object(scraper.urllib.request, "urlopen") as op:
+            op.return_value.__enter__.return_value.status = 200
+            logo = scraper._find_logo(html, "https://daigo.example", "Daigo")
+        self.assertTrue(logo.endswith("daigo_logo.png"), logo)
+
+    def test_thumbnail_kept_when_no_original_exists(self):
+        html = ('<html><body><img src="/uploads/daigo_logo-150x110.png"></body></html>')
+        with mock.patch.object(scraper.urllib.request, "urlopen",
+                               side_effect=RuntimeError("404")):
+            logo = scraper._find_logo(html, "https://daigo.example", "Daigo")
+        self.assertTrue(logo.endswith("daigo_logo-150x110.png"), logo)
 
 
 class TestScrapeStatic(unittest.TestCase):

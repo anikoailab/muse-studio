@@ -339,6 +339,7 @@ a:hover{text-decoration:underline}
             <span class="img-cell add" id="logoAdd" title="Upload logo">+</span>
             <div class="toggle" id="logoToggle"><span class="tk"></span><span>Use real logo in renders</span></div>
           </div>
+          <div id="logoWarn" style="display:none;margin-top:6px;font-size:11px;line-height:1.4;color:#b3261e"></div>
         </div>
 
         <div class="field-row">
@@ -792,7 +793,16 @@ function drawLogo(){
   const slot=$("#logoSlot");
   if(brand.logo)slot.innerHTML=`<img src="${esc(brand.logo)}" onerror="this.parentNode.innerHTML='<span style=&quot;font-size:10px;color:var(--ink-soft)&quot;>none</span>'">`;
   else slot.innerHTML=`<span style="font-size:10px;color:var(--ink-soft)">none</span>`;
-  $("#logoToggle").classList.toggle("on",useLogo&&!!brand.logo);
+  const live=logoUsable();
+  $("#logoToggle").classList.toggle("on",live);
+  // An SVG logo is dropped server-side (the render model rejects vectors). Say so, instead
+  // of showing the toggle ON while every slide quietly renders an invented mark.
+  const warn=$("#logoWarn");
+  if(warn){
+    const isSvg=useLogo&&brand.logo&&!live;
+    warn.textContent=isSvg?"This logo is an SVG, which the render model cannot read. Upload a PNG or JPG with the + button.":"";
+    warn.style.display=isSvg?"block":"none";
+  }
 }
 $("#logoToggle").onclick=()=>{useLogo=!useLogo;drawLogo();};
 $("#logoAdd").onclick=()=>{
@@ -987,18 +997,48 @@ function drawRows(){
 }
 
 /* ================= render prompt (proven, ported) ================= */
+
+/* The model (and the server) accept at most MAX_REFS reference images. The logo used to be
+   appended AFTER the product refs and then silently sliced off whenever a slide had 3
+   products - while the prompt still promised "a logo reference is provided". One plan,
+   built once, decides the payload AND the prompt's numbering so they cannot drift. */
+const MAX_REFS=3;
+function logoUsable(){
+  const L=brand.logo||"";
+  if(!useLogo||!L)return false;
+  // SVG is dropped server-side (the render model rejects it) - so never count on it here.
+  const base=L.split("?")[0].split("#")[0].toLowerCase();
+  return !(base.endsWith(".svg")||L.startsWith("data:image/svg"));
+}
+function refPlan(role){
+  const hasLogo=logoUsable();
+  const prefs=(role&&Array.isArray(role.productRefs)&&role.productRefs.length)?role.productRefs
+    :((role&&role.productRef!=null)?[role.productRef]:[]);
+  // reserve the logo's slot up front instead of letting the slice eat it
+  const cap=hasLogo?MAX_REFS-1:MAX_REFS;
+  const productCount=Math.min(prefs.length,cap);
+  return {prefs:prefs.slice(0,cap),productCount,hasLogo};
+}
+
 function slidePrompt(post,role,i,n){
   const C=brand.colors||[],pal=C.slice(0,5).join(", "),c1=C[0]||"#8a8a8a",c2=C[1]||"#1a1a1a";
   const font=(brand.fonts&&brand.fonts.display)||"a clean modern sans-serif";
   const dir=state.direction||"on-brand";
   const concept=(post.idea||"").slice(0,160);
-  const nRefs=(role&&Array.isArray(role.productRefs)&&role.productRefs.length)?Math.min(role.productRefs.length,3):(role&&role.productRef!=null?1:0);
+  // MAX_REFS is the model's hard ceiling; the server slices to it too. See refPlan().
+  const plan=refPlan(role);
+  const nRefs=plan.productCount;
   const ref=nRefs>0
     ? ` The first ${nRefs===1?"reference photo provided is the real product":nRefs+" reference photos provided are the real products"} - reproduce ${nRefs===1?"it":"each of them"} EXACTLY: preserve the real bottle/pack shape, colour, packaging and label, and place ${nRefs===1?"it":"them"} naturally in the scene. STRICT PRODUCT RULE: show ONLY the product${nRefs===1?"":"s"} present in the reference photos - never invent, redesign, or add any other bottle, jar, or pack, and if the concept mentions a product with no reference photo, leave it out rather than imagining it.`
     : ((brand.productImages||[]).length
       ? ` STRICT PRODUCT RULE: this slide has NO product reference photo, so do NOT depict any packaged product at all - no bottle, jar, box, pouch, or labelled pack, not even in the background. Build the slide from typography, prepared food, scenery, and the brand's colors instead.`
       : ` Feature the real ${brand.name} product, shot in a style that suits the brand.`);
-  const logoNote=(useLogo&&brand.logo)?" A reference image of the brand's REAL logo is provided - reproduce that EXACT logo (its exact wordmark, symbol, and colors) wherever the brand mark appears. Do not invent a different logo, symbol, or color scheme for it.":"";
+  // Naming the logo's POSITION in the reference list is what makes the model use it. With an
+  // unnumbered "a logo reference is provided" it treats every ref as scenery and redraws the
+  // mark from the brand name - which is how D'AIGO came back as "AIGO" in the wrong colour.
+  const logoNote=plan.hasLogo
+    ? ` The LAST reference image is NOT a scene element - it is the brand's REAL logo, supplied on a plain background. Wherever the brand mark appears on this slide, reproduce THAT logo exactly: every letter and character of the wordmark including any apostrophe, accent or punctuation, its exact letterforms, its symbol, and its exact colors. The wordmark reads "${(brand.name||"").toUpperCase()}" - render it COMPLETE and correctly spelled, never dropping, cropping, shortening or re-spelling any part of it, and never recolouring it to match the slide. Do not invent a different logo, monogram or symbol, and do not place the logo image itself into the scene as a physical object.`
+    : "";
   const isStory=post.postType==="story",kind=isStory?"story":"carousel";
   const shopNote=(role.tag||"").toUpperCase()==="SHOP"
     ? ` This is the SHOP slide - it is the ONLY slide in the ${kind} allowed to show pricing, cost, tiers, a comparison table, or an order/buy call-to-action.`
@@ -1022,15 +1062,15 @@ async function genCarousel(p){
     for(let i=0;i<total;i++){
       const role=p.roles[i];
       note.textContent=`Rendering slide ${i+1} of ${total}...`;
-      const refs=[];
-      const prefs=(Array.isArray(role.productRefs)&&role.productRefs.length)?role.productRefs
-        :(role.productRef!=null?[role.productRef]:[]);
-      for(const pi of prefs.slice(0,3)){
+      const refs=[],plan=refPlan(role);
+      for(const pi of plan.prefs){
         const im=brand.productImages&&brand.productImages[pi];
         if(im){const u=imgUrl(im);if(u)refs.push(u);}
       }
-      if(useLogo&&brand.logo)refs.push(brand.logo);
-      if(moodUrl&&refs.length<3)refs.push(moodUrl);
+      if(moodUrl&&refs.length<MAX_REFS-(plan.hasLogo?1:0))refs.push(moodUrl);
+      // logo goes LAST, always - the prompt calls it out by that position, so a product
+      // ref failing to resolve can never shift the model onto the wrong image
+      if(plan.hasLogo)refs.push(brand.logo);
       let ok=false,lastErr="";
       for(let a=0;a<3&&!ok;a++){
         if(a)await new Promise(r=>setTimeout(r,900*a));
