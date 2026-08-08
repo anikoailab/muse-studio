@@ -279,6 +279,26 @@ class TestAuthGate(unittest.TestCase):
         st, body = _get(self.base + "/api/health", headers={"Authorization": "Basic " + creds})
         self.assertEqual(st, 200)
 
+    def test_landing_page_public(self):
+        st, body = _get(self.base + "/")
+        self.assertEqual(st, 200)
+
+    def test_studio_still_gated(self):
+        st, _ = _get(self.base + "/studio", expect_error=True)
+        self.assertEqual(st, 401)
+
+    def test_sample_request_post_public(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as td, mock.patch.object(server, "RENDERS_DIR", td):
+            st, j = _post(self.base + "/api/sample-request",
+                          {"email": "lead@example.com", "website": "example.com"})
+        self.assertEqual(st, 200)
+        self.assertTrue(j["ok"])
+
+    def test_sample_requests_list_still_gated(self):
+        st, _ = _get(self.base + "/api/sample-requests", expect_error=True)
+        self.assertEqual(st, 401)
+
 
 class TestIdeasRoute(unittest.TestCase):
     @classmethod

@@ -23,6 +23,10 @@ from scraper import scrape_brand
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(ROOT, "data", "brand-state.json")
+# Renders + captured leads live here. RENDER_OUT points it at a mounted volume on a host;
+# every reader/writer (library, store-image, static serving, schedule's local-file fallback,
+# sample requests) MUST use this one path or volume setups silently show an empty library.
+RENDERS_DIR = os.environ.get("RENDER_OUT") or os.path.join(ROOT, "renders")
 
 
 def _read_state():
@@ -64,9 +68,14 @@ class Handler(BaseHTTPRequestHandler):
             rel = "landing.html" if os.path.isfile(os.path.join(ROOT, "landing.html")) else "index.html"
         elif rel in ("studio", "studio/"):
             rel = "index.html"
-        full = os.path.normpath(os.path.join(ROOT, rel))
+        # renders/ may live outside ROOT (RENDER_OUT volume) - map that URL prefix to it
+        if rel.startswith("renders/"):
+            root, sub = RENDERS_DIR, rel[len("renders/"):]
+        else:
+            root, sub = ROOT, rel
+        full = os.path.normpath(os.path.join(root, sub))
         base = os.path.basename(full).lower()
-        if (not full.startswith(ROOT + os.sep) or not os.path.isfile(full)
+        if (not full.startswith(root + os.sep) or not os.path.isfile(full)
                 or base.startswith(".") or base.startswith("env")
                 or not base.endswith(self._SERVABLE)):
             return self._json(404, {"error": "not found"})
@@ -92,6 +101,15 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         return json.loads(self.rfile.read(length) or b"{}")
 
+    # The landing page is the public storefront + lead capture - it must stay reachable
+    # even once STUDIO_PASSWORD locks the studio and API. GET /api/sample-requests (the
+    # captured leads LIST) is exact-matched out of the public set and stays gated.
+    def _is_public(self, method, path):
+        p = path.split("?", 1)[0]
+        if method == "GET":
+            return p in ("/", "/landing.html", "/favicon.ico") or p.startswith("/landing-images/")
+        return method == "POST" and p.rstrip("/") == "/api/sample-request"
+
     def _authed(self):
         """One shared login gates the whole app + API. Constant-time compare.
         Gate is OFF until STUDIO_PASSWORD is set (local dev needs no login)."""
@@ -112,7 +130,7 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def do_GET(self):
-        if not self._authed():
+        if not self._is_public("GET", self.path) and not self._authed():
             return
         if self.path.startswith("/api/health"):
             return self._json(200, {"ok": True, "app": S.APP_NAME,
@@ -135,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
         return self._file(self.path)
 
     def do_POST(self):
-        if not self._authed():
+        if not self._is_public("POST", self.path) and not self._authed():
             return
         try:
             if self.path.startswith("/api/scrape"):
@@ -264,8 +282,12 @@ class Handler(BaseHTTPRequestHandler):
                 raise RuntimeError("blotato /v2/media returned no url")
             return body["url"]
         rel = u.lstrip("/")
-        full = os.path.normpath(os.path.join(ROOT, rel))
-        if not full.startswith(ROOT + os.sep) or not os.path.isfile(full):
+        if rel.startswith("renders/"):
+            root, sub = RENDERS_DIR, rel[len("renders/"):]
+        else:
+            root, sub = ROOT, rel
+        full = os.path.normpath(os.path.join(root, sub))
+        if not full.startswith(root + os.sep) or not os.path.isfile(full):
             raise RuntimeError("local media file not found: %s" % u)
         return S.blotato_upload_file(full)
 
@@ -373,7 +395,7 @@ class Handler(BaseHTTPRequestHandler):
     def _library(self):
         """Every render saved under renders/, grouped by brand folder, newest first.
         Paths are ROOT-relative so the static file server can serve them directly."""
-        base = os.path.join(ROOT, "renders")
+        base = RENDERS_DIR
         brands = []
         try:
             for slug in os.listdir(base):
@@ -403,7 +425,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "valid email required"})
         if not site:
             return self._json(400, {"error": "brand website required"})
-        base = os.environ.get("RENDER_OUT") or os.path.join(ROOT, "renders")
+        base = RENDERS_DIR
         os.makedirs(base, exist_ok=True)
         import datetime
         with open(os.path.join(base, "_sample-requests.jsonl"), "a", encoding="utf-8") as f:
@@ -412,7 +434,7 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {"ok": True})
 
     def _sample_requests_list(self):
-        base = os.environ.get("RENDER_OUT") or os.path.join(ROOT, "renders")
+        base = RENDERS_DIR
         out = []
         try:
             with open(os.path.join(base, "_sample-requests.jsonl"), encoding="utf-8") as f:
@@ -431,7 +453,7 @@ class Handler(BaseHTTPRequestHandler):
         pid = re.sub(r"[^0-9A-Za-z]+", "", str(req.get("postId", "0"))) or "0"
         sn = re.sub(r"[^0-9]+", "", str(req.get("slide", "0"))) or "0"
         role = re.sub(r"[^a-z0-9]+", "", str(req.get("role", "")).lower())
-        base = os.environ.get("RENDER_OUT") or os.path.join(ROOT, "renders")
+        base = RENDERS_DIR
         folder = os.path.join(base, slug)
         os.makedirs(folder, exist_ok=True)
         fname = "post%s_slide%s%s.png" % (pid, sn, ("_" + role) if role else "")
@@ -444,7 +466,8 @@ class Handler(BaseHTTPRequestHandler):
                 f.write(data)
         except Exception as e:
             return self._json(502, {"error": "download failed: %s" % e})
-        rel = "renders/%s/%s" % (slug, fname) if base == os.path.join(ROOT, "renders") else dest
+        # always the URL-style path: static serving + _resolve_media map renders/ to RENDERS_DIR
+        rel = "renders/%s/%s" % (slug, fname)
         return self._json(200, {"ok": True, "path": rel, "bytes": len(data)})
 
     def log_message(self, *a):
